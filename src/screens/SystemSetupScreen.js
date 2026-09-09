@@ -248,8 +248,8 @@ export const SystemSetupScreen = ({
         new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
       );
       Alert.alert(
-        'Controller Firmware',
-        `ESP32 v${esp32FirmwareVersion} • Up to date.`
+        'Controller Software',
+        `Controller Software v${esp32FirmwareVersion} • Up to date.`
       );
     }, 1200);
   };
@@ -622,24 +622,24 @@ export const SystemSetupScreen = ({
 
             <View style={styles.divider} />
 
-            {/* ESP32 Hardware Controller Firmware Card */}
+            {/* Smart Water Controller Software Card */}
             <View style={styles.otaDetailsBox}>
               <View style={styles.otaHeaderRow}>
-                <MaterialCommunityIcons name="chip" size={18} color="#0284C7" />
-                <Text style={styles.otaHeaderTitle}>ESP32 Hardware Controller</Text>
+                <MaterialCommunityIcons name="water-pump" size={18} color="#0284C7" />
+                <Text style={styles.otaHeaderTitle}>Smart Water Controller</Text>
               </View>
               <View style={styles.otaInfoRow}>
-                <Text style={styles.otaInfoLabel}>Hardware Status</Text>
+                <Text style={styles.otaInfoLabel}>Device Status</Text>
                 <Text style={[styles.otaInfoValue, { color: isDeviceOnline ? COLORS.success : COLORS.danger }]}>
                   {isDeviceOnline ? '● Online (Live)' : '● Offline (Not Responding)'}
                 </Text>
               </View>
               <View style={styles.otaInfoRow}>
-                <Text style={styles.otaInfoLabel}>Last Heartbeat</Text>
+                <Text style={styles.otaInfoLabel}>Last Connection</Text>
                 <Text style={styles.otaInfoValue}>{lastSeenText}</Text>
               </View>
               <View style={styles.otaInfoRow}>
-                <Text style={styles.otaInfoLabel}>Board Firmware</Text>
+                <Text style={styles.otaInfoLabel}>System Version</Text>
                 <Text style={styles.otaInfoValue}>v{esp32FirmwareVersion}</Text>
               </View>
               <View style={[styles.otaInfoRow, { borderBottomWidth: 0 }]}>
@@ -660,7 +660,7 @@ export const SystemSetupScreen = ({
                 <MaterialCommunityIcons name="refresh" size={16} color={COLORS.white} />
               )}
               <Text style={styles.btnCheckOTAText}>
-                {isCheckingFirmware ? 'Checking Controller...' : 'Check Controller Firmware'}
+                {isCheckingFirmware ? 'Checking System...' : 'Check System Updates'}
               </Text>
             </TouchableOpacity>
 

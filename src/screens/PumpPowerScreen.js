@@ -7,6 +7,7 @@ import { COLORS, FONTS } from '../constants/theme';
 export const PumpPowerScreen = ({
   motorState,
   cooldownRemaining,
+  isMotorLoading = false,
   onStartMotor,
   onStopMotor,
   isConnected,
@@ -51,6 +52,7 @@ export const PumpPowerScreen = ({
       <MotorControlCard
         motorState={motorState}
         cooldownRemaining={cooldownRemaining}
+        isMotorLoading={isMotorLoading}
         onStartMotor={onStartMotor}
         onStopMotor={onStopMotor}
         isConnected={isConnected}

@@ -87,7 +87,7 @@ export const ActivityLogScreen = ({ logs = [], onClearLogs }) => {
                 </View>
 
                 <View style={styles.sourcePill}>
-                  <Text style={styles.sourceText}>{item.source || 'ESP32'}</Text>
+                  <Text style={styles.sourceText}>{item.source || 'Controller'}</Text>
                 </View>
               </View>
 

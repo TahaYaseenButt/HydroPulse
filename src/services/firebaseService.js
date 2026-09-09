@@ -566,6 +566,9 @@ export const loadFirebaseConfig = async () => {
  * Sync Water Tank Telemetry to Firebase Realtime Database (/tank/live)
  */
 export const syncTelemetryToFirebase = async (tankData, activeUser) => {
+  const userId = activeUser?.uid || activeUser?.username || 'system';
+  const userName = activeUser?.displayName || activeUser?.username || 'System';
+
   const payload = {
     percentage: tankData.percentage ?? 50,
     remainingLiters: tankData.remainingLiters ?? 500,
@@ -574,7 +577,8 @@ export const syncTelemetryToFirebase = async (tankData, activeUser) => {
     motorState: !!tankData.motorState,
     flowStatus: tankData.flowStatus ?? 'stable',
     lastUpdated: new Date().toISOString(),
-    updatedBy: activeUser ? `${activeUser.displayName} (${activeUser.role})` : 'System',
+    userId: userId,
+    updatedBy: `${userName} (${activeUser?.role || 'user'})`,
   };
 
   if (!isFirebaseReady || !realtimeDb) {
@@ -583,7 +587,7 @@ export const syncTelemetryToFirebase = async (tankData, activeUser) => {
 
   try {
     const tankRef = ref(realtimeDb, 'tank/live');
-    await set(tankRef, payload);
+    await update(tankRef, payload);
     return { success: true, payload };
   } catch (err) {
     // Offline or network warning - silent graceful fallback
@@ -594,6 +598,7 @@ export const syncTelemetryToFirebase = async (tankData, activeUser) => {
 /**
  * Push Motor Control Command to Firebase Realtime Database
  * STRICT RBAC: Only Parent role can turn motor ON or OFF!
+ * Records user id, role, timestamp, and audit trail in the cloud.
  */
 export const pushMotorCommandToFirebase = async (command, user) => {
   // 1. Role-Based Access Control Verification
@@ -605,26 +610,52 @@ export const pushMotorCommandToFirebase = async (command, user) => {
     };
   }
 
+  const userId = user.uid || user.username || 'parent_user_001';
+  const userName = user.displayName || user.username || 'Parent';
+
   const cmdPayload = {
     command: command, // 'ON' or 'OFF'
     timestamp: new Date().toISOString(),
-    requestedBy: user.email || user.displayName || 'Parent',
+    userId: userId,
+    requestedBy: userName,
+    email: user.email || '',
     authorizedRole: 'parent',
+    deviceId: user.deviceId || 'TANK-01',
   };
 
   if (!isFirebaseReady || !realtimeDb) {
-    return { success: true, offline: true, cmdPayload };
+    return { success: true, offline: true, cmdPayload, motorState: command === 'ON' };
   }
 
   try {
+    // 1. Write command queue
     const cmdRef = ref(realtimeDb, 'tank/motor_command');
     await set(cmdRef, cmdPayload);
 
-    // Also update motorState in tank/live
-    const liveMotorRef = ref(realtimeDb, 'tank/live/motorState');
-    await set(liveMotorRef, command === 'ON');
+    // 2. Atomically update live motor status and user ID in /tank/live
+    const liveRef = ref(realtimeDb, 'tank/live');
+    await update(liveRef, {
+      motorState: command === 'ON',
+      userId: userId,
+      lastMotorCommand: command,
+      lastMotorChange: new Date().toISOString(),
+      motorUpdatedByUserId: userId,
+      motorUpdatedByName: userName,
+    });
 
-    return { success: true, cmdPayload };
+    // 3. Append to persistent audit history log in /tank/motor_history
+    const historyRef = ref(realtimeDb, `tank/motor_history/${Date.now()}`);
+    await set(historyRef, {
+      command: command,
+      motorState: command === 'ON',
+      userId: userId,
+      userName: userName,
+      userRole: 'parent',
+      deviceId: user.deviceId || 'TANK-01',
+      timestamp: new Date().toISOString(),
+    });
+
+    return { success: true, cmdPayload, motorState: command === 'ON' };
   } catch (err) {
     return { success: false, error: err.message, cmdPayload };
   }

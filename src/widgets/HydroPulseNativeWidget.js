@@ -27,7 +27,7 @@ export function HydroPulseNativeWidget({
   const isOffline = flowStatus === 'offline';
   const flowLabel =
     isOffline
-      ? '● ESP32 Offline'
+      ? '● Device Offline'
       : flowStatus === 'filling'
       ? '↑ Filling'
       : flowStatus === 'dropping'

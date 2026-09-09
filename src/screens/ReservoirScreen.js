@@ -6,6 +6,7 @@ import {
   TouchableOpacity,
   Alert,
   Image,
+  ActivityIndicator,
 } from 'react-native';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { WaterTankView } from '../components/WaterTankView';
@@ -23,6 +24,7 @@ export const ReservoirScreen = ({
   highThreshold = 90,
   motorState = false,
   cooldownRemaining = 0,
+  isMotorLoading = false,
   onStartMotor,
   onStopMotor,
   isConnected = true,
@@ -43,6 +45,8 @@ export const ReservoirScreen = ({
   }, [cooldownRemaining, showCooldownModal]);
 
   const handleMotorPress = () => {
+    if (isMotorLoading) return;
+
     if (!isParent) {
       triggerHaptic.warning();
       Alert.alert('Access Restricted', 'Child accounts cannot operate the motor.');
@@ -53,14 +57,14 @@ export const ReservoirScreen = ({
       triggerHaptic.warning();
       Alert.alert(
         'Controller Not Responding',
-        'ESP32 hardware controller is currently offline. Motor commands cannot be executed.'
+        'The water controller is currently offline. Motor commands cannot be executed.'
       );
       return;
     }
 
     if (!isConnected) {
       triggerHaptic.warning();
-      Alert.alert('Offline', 'App is not connected to cloud broker.');
+      Alert.alert('Offline', 'App is not connected to the cloud server.');
       return;
     }
 
@@ -117,7 +121,7 @@ export const ReservoirScreen = ({
         </View>
       </View>
 
-      {/* ── Prominent Offline Banner when ESP32 is not responding ── */}
+      {/* ── Prominent Offline Banner when controller is not responding ── */}
       {!isDeviceOnline && (
         <View style={styles.offlineBanner}>
           <View style={styles.offlineIconCircle}>
@@ -126,7 +130,7 @@ export const ReservoirScreen = ({
           <View style={styles.offlineTextCol}>
             <Text style={styles.offlineTitle}>Controller Not Responding</Text>
             <Text style={styles.offlineSub}>
-              ESP32 is offline ({lastSeenText}). Check power supply & WiFi.
+              Device is offline ({lastSeenText}). Check power and connection.
             </Text>
           </View>
         </View>
@@ -146,26 +150,34 @@ export const ReservoirScreen = ({
         />
       </View>
 
-      {/* ── Motor Toggle Button ── */}
+      {/* ── Motor Toggle Button (Server-Confirmed Save) ── */}
       <TouchableOpacity
         style={[
           styles.motorBtn,
           motorState ? styles.motorBtnStop : styles.motorBtnStart,
           cooldownRemaining > 0 && styles.motorBtnCooldown,
           !isDeviceOnline && styles.motorBtnOffline,
+          isMotorLoading && styles.motorBtnCooldown,
         ]}
         onPress={handleMotorPress}
+        disabled={isMotorLoading || !isDeviceOnline || cooldownRemaining > 0}
         activeOpacity={0.85}
       >
-        <MaterialCommunityIcons
-          name={!isDeviceOnline ? 'cloud-off-outline' : cooldownRemaining > 0 ? 'timer-sand' : 'power'}
-          size={18}
-          color={COLORS.white}
-          style={{ marginRight: 8 }}
-        />
+        {isMotorLoading ? (
+          <ActivityIndicator size="small" color={COLORS.white} style={{ marginRight: 8 }} />
+        ) : (
+          <MaterialCommunityIcons
+            name={!isDeviceOnline ? 'cloud-off-outline' : cooldownRemaining > 0 ? 'timer-sand' : 'power'}
+            size={18}
+            color={COLORS.white}
+            style={{ marginRight: 8 }}
+          />
+        )}
         <Text style={styles.motorBtnText}>
           {!isDeviceOnline
             ? 'Controller Offline'
+            : isMotorLoading
+            ? (motorState ? 'Stopping Pump in Cloud...' : 'Starting Pump in Cloud...')
             : motorState
             ? `Turn Off Motor${cooldownRemaining > 0 ? ` (${cooldownRemaining}s)` : ''}`
             : `Turn On Motor${cooldownRemaining > 0 ? ` (${cooldownRemaining}s)` : ''}`}
@@ -180,7 +192,7 @@ export const ReservoirScreen = ({
       >
         <View style={[styles.diagDot, isDeviceOnline ? styles.dotGreen : styles.dotRed]} />
         <Text style={styles.diagText}>
-          {isDeviceOnline ? `ESP32 Live (${lastSeenText})` : 'ESP32 Offline'} • Flow: {flowStatus} • Motor: {motorState ? 'ON' : 'OFF'}
+          {isDeviceOnline ? `Controller Live (${lastSeenText})` : 'Controller Offline'} • Flow: {flowStatus} • Motor: {motorState ? 'ON' : 'OFF'}
         </Text>
         <MaterialCommunityIcons
           name={showDiag ? 'chevron-up' : 'chevron-down'}

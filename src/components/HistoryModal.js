@@ -31,7 +31,7 @@ export const HistoryModal = ({
     <View style={styles.logRow}>
       <View style={styles.logTimeCol}>
         <Text style={styles.logTime}>{item.displayTime || item.time}</Text>
-        <Text style={styles.logSource}>{item.source === 'Sim' ? 'Simulation' : 'ESP32 Device'}</Text>
+        <Text style={styles.logSource}>{item.source === 'Sim' ? 'Simulation' : 'Smart Controller'}</Text>
       </View>
       <View style={styles.logDataCol}>
         <Text style={styles.logDepth}>Water Depth: {item.depthCm} cm</Text>

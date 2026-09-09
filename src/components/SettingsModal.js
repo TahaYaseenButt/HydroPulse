@@ -248,7 +248,7 @@ export const SettingsModal = ({
                 </View>
 
                 <View style={styles.inputGroup}>
-                  <Text style={styles.inputLabel}>ESP32 Distance Data Unit</Text>
+                  <Text style={styles.inputLabel}>Sensor Measurement Unit</Text>
                   <View style={styles.unitSelector}>
                     {['meters', 'centimeters', 'auto'].map((unit) => (
                       <TouchableOpacity
@@ -266,7 +266,7 @@ export const SettingsModal = ({
                       </TouchableOpacity>
                     ))}
                   </View>
-                  <Text style={styles.hint}>Matches ESP32 firmware publishing format (%.3f meters)</Text>
+                  <Text style={styles.hint}>Standard unit for tank depth measurement (meters)</Text>
                 </View>
               </View>
             )}

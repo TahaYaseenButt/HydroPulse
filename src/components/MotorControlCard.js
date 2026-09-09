@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, Alert, Animated, Easing } from 'react-native';
+import { View, Text, StyleSheet, TouchableOpacity, Alert, Animated, Easing, ActivityIndicator } from 'react-native';
 import Svg, { Circle, Path, G } from 'react-native-svg';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { COLORS, FONTS } from '../constants/theme';
@@ -8,6 +8,7 @@ import { triggerHaptic } from '../services/hapticService';
 export const MotorControlCard = ({
   motorState = false,
   cooldownRemaining = 0,
+  isMotorLoading = false,
   onStartMotor,
   onStopMotor,
   isConnected = false,
@@ -76,6 +77,8 @@ export const MotorControlCard = ({
   };
 
   const handleStartPress = () => {
+    if (isMotorLoading) return;
+
     if (!isParent) {
       triggerHaptic.warning();
       Alert.alert(
@@ -93,14 +96,14 @@ export const MotorControlCard = ({
       triggerHaptic.warning();
       Alert.alert(
         'Controller Not Responding',
-        'The ESP32 controller is not responding. Please check that the ESP32 is powered on and connected to WiFi.'
+        'The water controller is not responding. Please check that the device is powered on and connected.'
       );
       return;
     }
 
     if (!isConnected) {
       triggerHaptic.warning();
-      Alert.alert('Offline', 'App is not connected to cloud broker.');
+      Alert.alert('Offline', 'App is not connected to cloud server.');
       return;
     }
 
@@ -114,7 +117,7 @@ export const MotorControlCard = ({
       return;
     }
 
-    Alert.alert('Start Pump?', 'Turn on the high-flow water pump.', [
+    Alert.alert('Start Pump?', 'Turn on the water pump.', [
       { text: 'Cancel', style: 'cancel' },
       {
         text: 'Start',
@@ -127,6 +130,8 @@ export const MotorControlCard = ({
   };
 
   const handleStopPress = () => {
+    if (isMotorLoading) return;
+
     if (!isParent) {
       triggerHaptic.warning();
       Alert.alert(
@@ -144,14 +149,14 @@ export const MotorControlCard = ({
       triggerHaptic.warning();
       Alert.alert(
         'Controller Not Responding',
-        'The ESP32 controller is not responding. Please check that the ESP32 is powered on and connected to WiFi.'
+        'The water controller is not responding. Please check that the device is powered on and connected.'
       );
       return;
     }
 
     if (!isConnected) {
       triggerHaptic.warning();
-      Alert.alert('Offline', 'App is not connected to cloud broker.');
+      Alert.alert('Offline', 'App is not connected to cloud server.');
       return;
     }
 
@@ -379,54 +384,76 @@ export const MotorControlCard = ({
         <TouchableOpacity
           style={[
             styles.btnStart,
-            (!isParent || motorState || isCooldown || !isConnected || !isDeviceOnline) && styles.btnDisabled,
+            (!isParent || motorState || isCooldown || !isConnected || !isDeviceOnline || isMotorLoading) && styles.btnDisabled,
           ]}
           onPress={handleStartPress}
+          disabled={!isParent || motorState || isCooldown || !isConnected || !isDeviceOnline || isMotorLoading}
           activeOpacity={0.8}
         >
-          <MaterialCommunityIcons
-            name={!isParent ? 'lock-outline' : !isDeviceOnline ? 'cloud-off-outline' : 'power'}
-            size={16}
-            color={
-              !isParent || motorState || isCooldown || !isConnected || !isDeviceOnline
-                ? '#94a3b8'
-                : COLORS.white
-            }
-          />
+          {isMotorLoading && !motorState ? (
+            <ActivityIndicator size="small" color={COLORS.white} style={{ marginRight: 6 }} />
+          ) : (
+            <MaterialCommunityIcons
+              name={!isParent ? 'lock-outline' : !isDeviceOnline ? 'cloud-off-outline' : 'power'}
+              size={16}
+              color={
+                !isParent || motorState || isCooldown || !isConnected || !isDeviceOnline
+                  ? '#94a3b8'
+                  : COLORS.white
+              }
+            />
+          )}
           <Text
             style={[
               styles.btnStartText,
-              (!isParent || motorState || isCooldown || !isConnected || !isDeviceOnline) && styles.btnTextDisabled,
+              (!isParent || motorState || isCooldown || !isConnected || !isDeviceOnline || isMotorLoading) && styles.btnTextDisabled,
             ]}
           >
-            {!isDeviceOnline ? 'Offline' : !isParent ? 'Locked' : 'Start Pump'}
+            {isMotorLoading && !motorState
+              ? 'Starting...'
+              : !isDeviceOnline
+              ? 'Offline'
+              : !isParent
+              ? 'Locked'
+              : 'Start Pump'}
           </Text>
         </TouchableOpacity>
 
         <TouchableOpacity
           style={[
             styles.btnStop,
-            (!isParent || !motorState || !isConnected || !isDeviceOnline) && styles.btnDisabled,
+            (!isParent || !motorState || !isConnected || !isDeviceOnline || isMotorLoading) && styles.btnDisabled,
           ]}
           onPress={handleStopPress}
+          disabled={!isParent || !motorState || !isConnected || !isDeviceOnline || isMotorLoading}
           activeOpacity={0.8}
         >
-          <MaterialCommunityIcons
-            name={!isParent ? 'lock-outline' : !isDeviceOnline ? 'cloud-off-outline' : 'power'}
-            size={16}
-            color={
-              !isParent || !motorState || !isConnected || !isDeviceOnline
-                ? '#94a3b8'
-                : COLORS.white
-            }
-          />
+          {isMotorLoading && motorState ? (
+            <ActivityIndicator size="small" color={COLORS.white} style={{ marginRight: 6 }} />
+          ) : (
+            <MaterialCommunityIcons
+              name={!isParent ? 'lock-outline' : !isDeviceOnline ? 'cloud-off-outline' : 'power'}
+              size={16}
+              color={
+                !isParent || !motorState || !isConnected || !isDeviceOnline
+                  ? '#94a3b8'
+                  : COLORS.white
+              }
+            />
+          )}
           <Text
             style={[
               styles.btnStopText,
-              (!isParent || !motorState || !isConnected || !isDeviceOnline) && styles.btnTextDisabled,
+              (!isParent || !motorState || !isConnected || !isDeviceOnline || isMotorLoading) && styles.btnTextDisabled,
             ]}
           >
-            {!isDeviceOnline ? 'Offline' : !isParent ? 'Locked' : 'Stop Pump'}
+            {isMotorLoading && motorState
+              ? 'Stopping...'
+              : !isDeviceOnline
+              ? 'Offline'
+              : !isParent
+              ? 'Locked'
+              : 'Stop Pump'}
           </Text>
         </TouchableOpacity>
       </View>

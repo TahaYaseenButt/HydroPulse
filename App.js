@@ -150,6 +150,7 @@ export default function App() {
   const [cooldownRemaining, setCooldownRemaining] = useState(0);
   const cooldownEndRef = useRef(0);
   const [isCooldownModalVisible, setIsCooldownModalVisible] = useState(false);
+  const [isMotorLoading, setIsMotorLoading] = useState(false);
 
   const updateMotorState = (val) => {
     motorStateRef.current = val;
@@ -214,11 +215,22 @@ export default function App() {
       setIsAuthChecking(false);
 
       // Listen to remote changes on Firebase Realtime Database
+      // The animation start/stop and motor button are confirmed from server data
       subscribeToFirebaseTank((remoteData) => {
         if (remoteData && remoteData.motorState !== undefined) {
           const remoteState = !!remoteData.motorState;
-          motorStateRef.current = remoteState;
-          setMotorState(remoteState);
+          if (motorStateRef.current !== remoteState) {
+            motorStateRef.current = remoteState;
+            setMotorState(remoteState);
+            if (remoteState) {
+              readingHistoryRef.current = [];
+              setFlowStatus('filling');
+            } else {
+              readingHistoryRef.current = [];
+              setFlowStatus('stable');
+            }
+            saveWidgetData({ motorState: remoteState, cooldownRemaining: cooldownEndRef.current > Date.now() ? Math.ceil((cooldownEndRef.current - Date.now()) / 1000) : 0 });
+          }
         }
       });
     })();
@@ -444,6 +456,13 @@ export default function App() {
     const isNowOn = statusStr === 'ON';
     if (motorStateRef.current !== isNowOn) {
       updateMotorState(isNowOn);
+      if (isNowOn) {
+        readingHistoryRef.current = [];
+        setFlowStatus('filling');
+      } else {
+        readingHistoryRef.current = [];
+        setFlowStatus('stable');
+      }
       startCooldown(20);
       saveWidgetData({ motorState: isNowOn, cooldownRemaining: 20 });
     }
@@ -456,7 +475,10 @@ export default function App() {
   };
 
   // 5. Protected Motor Controls (Parent Role Authorized Only!)
+  // Animation and motor activation strictly depend on server save confirmation
   const handleStartMotor = async () => {
+    if (isMotorLoading) return;
+
     if (cooldownRemaining > 0) {
       triggerHaptic.warning();
       setIsCooldownModalVisible(true);
@@ -477,20 +499,37 @@ export default function App() {
     }
 
     triggerHaptic.medium();
-    updateMotorState(true);
-    startCooldown(20);
+    setIsMotorLoading(true);
 
-    // Clear old history so previous dropping readings do not fight the filling state
-    readingHistoryRef.current = [];
-    setFlowStatus('filling');
-
+    // 1. Dispatch command to hardware controller via MQTT
     if (mqttClientRef.current) {
       mqttClientRef.current.publish(settings.mqttTopicMotorSet, 'ON');
+      mqttClientRef.current.publish(settings.mqttTopicMotorStatus, 'ON', true);
     }
-    await pushMotorCommandToFirebase('ON', activeUser);
+
+    // 2. Persist motor state + user id in Cloud Database
+    const res = await pushMotorCommandToFirebase('ON', activeUser);
+    setIsMotorLoading(false);
+
+    if (res && res.success) {
+      // 3. Trigger state and water animation ONLY upon confirmed server save!
+      updateMotorState(true);
+      startCooldown(20);
+      readingHistoryRef.current = [];
+      setFlowStatus('filling');
+      saveWidgetData({ motorState: true, cooldownRemaining: 20 });
+    } else if (res && res.blocked) {
+      triggerHaptic.warning();
+      Alert.alert('Access Denied', res.error || 'Only Parent can turn on the motor.');
+    } else {
+      triggerHaptic.warning();
+      Alert.alert('Notice', 'Command dispatched. Syncing status with server...');
+    }
   };
 
   const handleStopMotor = async () => {
+    if (isMotorLoading) return;
+
     if (cooldownRemaining > 0) {
       triggerHaptic.warning();
       setIsCooldownModalVisible(true);
@@ -511,17 +550,32 @@ export default function App() {
     }
 
     triggerHaptic.medium();
-    updateMotorState(false);
-    startCooldown(20);
+    setIsMotorLoading(true);
 
-    // Immediately stop filling flow state and flush history
-    readingHistoryRef.current = [];
-    setFlowStatus('stable');
-
+    // 1. Dispatch command to hardware controller via MQTT
     if (mqttClientRef.current) {
       mqttClientRef.current.publish(settings.mqttTopicMotorSet, 'OFF');
+      mqttClientRef.current.publish(settings.mqttTopicMotorStatus, 'OFF', true);
     }
-    await pushMotorCommandToFirebase('OFF', activeUser);
+
+    // 2. Persist motor state + user id in Cloud Database
+    const res = await pushMotorCommandToFirebase('OFF', activeUser);
+    setIsMotorLoading(false);
+
+    if (res && res.success) {
+      // 3. Immediately stop water animation and reset state upon confirmed server save!
+      updateMotorState(false);
+      startCooldown(20);
+      readingHistoryRef.current = [];
+      setFlowStatus('stable');
+      saveWidgetData({ motorState: false, cooldownRemaining: 20 });
+    } else if (res && res.blocked) {
+      triggerHaptic.warning();
+      Alert.alert('Access Denied', res.error || 'Only Parent can turn off the motor.');
+    } else {
+      triggerHaptic.warning();
+      Alert.alert('Notice', 'Command dispatched. Syncing status with server...');
+    }
   };
 
   // 6. Role Selection Handler
@@ -676,6 +730,7 @@ export default function App() {
               timeEstimate={timeEstimate}
               motorState={motorState}
               cooldownRemaining={cooldownRemaining}
+              isMotorLoading={isMotorLoading}
               onStartMotor={handleStartMotor}
               onStopMotor={handleStopMotor}
               isConnected={isConnected}
@@ -708,6 +763,7 @@ export default function App() {
             <PumpPowerScreen
               motorState={motorState}
               cooldownRemaining={cooldownRemaining}
+              isMotorLoading={isMotorLoading}
               onStartMotor={handleStartMotor}
               onStopMotor={handleStopMotor}
               isConnected={isConnected}
