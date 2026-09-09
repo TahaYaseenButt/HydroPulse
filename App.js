@@ -112,7 +112,7 @@ export default function App() {
           if (prev) saveWidgetData({ flowStatus: 'offline' });
           return false;
         });
-      } else if (Date.now() - lastMsg > 7500) {
+      } else if (Date.now() - lastMsg > 15000) {
         setIsDeviceOnline((prev) => {
           if (prev) saveWidgetData({ flowStatus: 'offline' });
           return false;
@@ -271,19 +271,19 @@ export default function App() {
               setEsp32FirmwareVersion(data.version);
             }
           } catch (e) {}
-        } else {
+        } else if (topic === activeSettings.mqttTopic || topic === 'waterlevel/distance') {
           handleDistancePayload(payload, 'ESP32');
+        } else {
+          console.log(`[MQTT] Handled message on ${topic}`);
         }
       },
       onError: () => {
         setIsConnected(false);
-        setIsDeviceOnline(false);
         setConnectionStatusText('Connection Error');
       },
       onClose: () => {
         setIsConnected(false);
-        setIsDeviceOnline(false);
-        setConnectionStatusText('Offline');
+        setConnectionStatusText('Reconnecting...');
       },
     });
 

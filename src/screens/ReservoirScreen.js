@@ -34,6 +34,7 @@ export const ReservoirScreen = ({
 }) => {
   const isParent = userRole === 'parent';
   const [showCooldownModal, setShowCooldownModal] = useState(false);
+  const [showDiag, setShowDiag] = useState(false);
 
   useEffect(() => {
     if (cooldownRemaining <= 0 && showCooldownModal) {
@@ -170,6 +171,48 @@ export const ReservoirScreen = ({
             : `Turn On Motor${cooldownRemaining > 0 ? ` (${cooldownRemaining}s)` : ''}`}
         </Text>
       </TouchableOpacity>
+
+      {/* ── Live Animation & Telemetry Diagnostics Strip ── */}
+      <TouchableOpacity
+        style={styles.diagStrip}
+        onPress={() => setShowDiag((prev) => !prev)}
+        activeOpacity={0.75}
+      >
+        <View style={[styles.diagDot, isDeviceOnline ? styles.dotGreen : styles.dotRed]} />
+        <Text style={styles.diagText}>
+          {isDeviceOnline ? `ESP32 Live (${lastSeenText})` : 'ESP32 Offline'} • Flow: {flowStatus} • Motor: {motorState ? 'ON' : 'OFF'}
+        </Text>
+        <MaterialCommunityIcons
+          name={showDiag ? 'chevron-up' : 'chevron-down'}
+          size={14}
+          color={COLORS.textMuted}
+        />
+      </TouchableOpacity>
+
+      {showDiag && (
+        <View style={styles.diagDetailBox}>
+          <Text style={styles.diagRow}>
+            • <Text style={styles.diagBold}>Water Level:</Text> {percentage}% ({remainingLiters} L)
+          </Text>
+          <Text style={styles.diagRow}>
+            • <Text style={styles.diagBold}>Flow State:</Text>{' '}
+            {flowStatus === 'filling'
+              ? 'Filling (Water Rising)'
+              : flowStatus === 'dropping'
+              ? 'Draining (Water Receding)'
+              : 'Stable (No Change)'}
+          </Text>
+          <Text style={styles.diagRow}>
+            • <Text style={styles.diagBold}>Inlet Water Stream:</Text>{' '}
+            {(motorState || flowStatus === 'filling') && flowStatus !== 'dropping' && percentage < 99
+              ? 'ACTIVE (Pouring Into Tank)'
+              : 'STOPPED'}
+          </Text>
+          <Text style={styles.diagRow}>
+            • <Text style={styles.diagBold}>Motor Relay:</Text> {motorState ? 'Closed (Active)' : 'Open (Standby)'}
+          </Text>
+        </View>
+      )}
 
       <CooldownModal
         visible={showCooldownModal && cooldownRemaining > 0}
@@ -341,5 +384,47 @@ const styles = StyleSheet.create({
   },
   motorBtnOffline: {
     backgroundColor: '#94A3B8',
+  },
+  diagStrip: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    backgroundColor: '#FFFFFF',
+    borderWidth: 1,
+    borderColor: '#E2E8F0',
+    paddingHorizontal: 12,
+    paddingVertical: 7,
+    borderRadius: 20,
+    marginTop: 10,
+  },
+  diagDot: {
+    width: 6,
+    height: 6,
+    borderRadius: 3,
+  },
+  diagText: {
+    fontFamily: FONTS.medium,
+    fontSize: 11,
+    color: COLORS.textSecondary,
+    flex: 1,
+  },
+  diagDetailBox: {
+    width: '100%',
+    backgroundColor: '#FFFFFF',
+    borderWidth: 1,
+    borderColor: '#E2E8F0',
+    borderRadius: 10,
+    padding: 10,
+    marginTop: 6,
+    gap: 3,
+  },
+  diagRow: {
+    fontFamily: FONTS.medium,
+    fontSize: 11,
+    color: COLORS.textSecondary,
+  },
+  diagBold: {
+    fontFamily: FONTS.bold,
+    color: COLORS.textPrimary,
   },
 });

@@ -22,8 +22,20 @@ export const WaterTankView = ({
   const clampedPercent = Math.max(0, Math.min(100, percentage));
   const animatedPercent = useRef(new Animated.Value(clampedPercent)).current;
 
-  // Is the tank actively being filled? (Motor is running OR telemetry detects filling)
-  const isFilling = (motorState || flowStatus === 'filling') && clampedPercent < 99;
+  // Is the tank actively being filled?
+  // Water stream from top should ONLY pour when:
+  // 1. Tank is NOT actively draining (flowStatus !== 'dropping')
+  // 2. Either the pump motor is ON or telemetry confirms filling
+  // 3. Tank is not completely full (< 99%)
+  const isDraining = flowStatus === 'dropping' && clampedPercent > 0;
+  const isFilling = !isDraining && (motorState || flowStatus === 'filling') && clampedPercent < 99;
+
+  // Real-time animation diagnostic logger
+  useEffect(() => {
+    console.log(
+      `[HydroAnimation] Level: ${clampedPercent}% (${remainingLiters}L) | Flow: ${flowStatus} | Motor: ${motorState ? 'ON' : 'OFF'} | Stream Active: ${isFilling} | Draining: ${isDraining}`
+    );
+  }, [clampedPercent, flowStatus, motorState, isFilling, isDraining]);
 
   // Horizontal wave travel animations
   const waveAnim1 = useRef(new Animated.Value(0)).current;
@@ -587,11 +599,17 @@ export const WaterTankView = ({
             </Text>
           </View>
 
-          {/* Filling Status Indicator Badge */}
+          {/* Status Indicator Badges */}
           {isFilling && (
             <View style={styles.fillingBadge}>
               <MaterialCommunityIcons name="arrow-up-bold" size={11} color="#059669" />
               <Text style={styles.fillingBadgeText}>FILLING</Text>
+            </View>
+          )}
+          {isDraining && (
+            <View style={styles.drainingBadge}>
+              <MaterialCommunityIcons name="arrow-down-bold" size={11} color="#D97706" />
+              <Text style={styles.drainingBadgeText}>DRAINING</Text>
             </View>
           )}
         </View>
@@ -838,6 +856,29 @@ const styles = StyleSheet.create({
     fontFamily: FONTS.bold,
     fontSize: 9.5,
     color: '#059669',
+    letterSpacing: 0.5,
+  },
+  drainingBadge: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 3,
+    backgroundColor: '#FFFBEB',
+    borderWidth: 1,
+    borderColor: '#FDE68A',
+    paddingHorizontal: 7,
+    paddingVertical: 2,
+    borderRadius: 8,
+    marginTop: 6,
+    shadowColor: '#D97706',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.15,
+    shadowRadius: 2,
+    elevation: 1,
+  },
+  drainingBadgeText: {
+    fontFamily: FONTS.bold,
+    fontSize: 9.5,
+    color: '#D97706',
     letterSpacing: 0.5,
   },
 });
