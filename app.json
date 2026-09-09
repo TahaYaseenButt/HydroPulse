@@ -1,6 +1,6 @@
 {
   "expo": {
-    "name": "WaterLevelSensing",
+    "name": "HydroPulse Water Monitor",
     "slug": "WaterLevelSensing",
     "version": "1.0.0",
     "orientation": "portrait",
@@ -10,6 +10,9 @@
       "supportsTablet": true
     },
     "android": {
+      "package": "com.hydropulse.waterlevelsensing",
+      "googleServicesFile": "./google-services.json",
+      "softwareKeyboardLayoutMode": "pan",
       "adaptiveIcon": {
         "backgroundColor": "#E6F4FE",
         "foregroundImage": "./assets/android-icon-foreground.png",
