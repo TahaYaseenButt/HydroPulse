@@ -7,7 +7,7 @@ export const DEFAULT_SETTINGS = {
   tankWidth: 100,         // cm
   sensorOffset: 10,       // cm
   sensorMount: 'top',     // 'top' or 'bottom'
-  sensorUnit: 'meters',   // 'meters' (matches ESP32 %.3f), 'centimeters', 'auto'
+  sensorUnit: 'meters',   // 'meters', 'centimeters', 'auto'
   
   // HiveMQ Cloud MQTT
   mqttHost: 'efbe2b7780d0454b828febbb5bd6a302.s1.eu.hivemq.cloud',
@@ -20,10 +20,15 @@ export const DEFAULT_SETTINGS = {
   mqttTopicMotorStatus: 'waterlevel/motor/status',
   mqttTopicSystem: 'waterlevel/system',
   
-  // Thresholds
+  // Alert Thresholds
   lowThreshold: 20,       // %
   criticalThreshold: 10,  // %
-  highThreshold: 90       // %
+  highThreshold: 90,      // %
+
+  // Automatic Pump Control (Auto Mode)
+  autoPumpEnabled: false,       // Master toggle for automatic pumping
+  autoPumpStartPercent: 20,     // Automatically turn ON motor when water level drops <= this %
+  autoPumpStopPercent: 95,      // Automatically turn OFF motor when water level reaches >= this %
 };
 
 const SETTINGS_STORAGE_KEY = '@hydropulse_settings_v1';

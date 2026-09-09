@@ -63,6 +63,11 @@ export const SystemSetupScreen = ({
     settings?.notificationsEnabled !== undefined ? settings?.notificationsEnabled : true
   );
 
+  // Automatic Pumping Automation Settings
+  const [autoPumpEnabled, setAutoPumpEnabled] = useState(settings?.autoPumpEnabled || false);
+  const [autoPumpStartPercent, setAutoPumpStartPercent] = useState(String(settings?.autoPumpStartPercent || 20));
+  const [autoPumpStopPercent, setAutoPumpStopPercent] = useState(String(settings?.autoPumpStopPercent || 95));
+
   // OTA Update States
   const [isCheckingFirmware, setIsCheckingFirmware] = useState(false);
   const [firmwareLastChecked, setFirmwareLastChecked] = useState('Just now');
@@ -98,6 +103,9 @@ export const SystemSetupScreen = ({
       setNotificationsEnabled(
         settings.notificationsEnabled !== undefined ? settings.notificationsEnabled : true
       );
+      setAutoPumpEnabled(settings.autoPumpEnabled || false);
+      setAutoPumpStartPercent(String(settings.autoPumpStartPercent || 20));
+      setAutoPumpStopPercent(String(settings.autoPumpStopPercent || 95));
     }
   }, [settings]);
 
@@ -121,10 +129,15 @@ export const SystemSetupScreen = ({
       mqttPassword,
       mqttTopic: mqttTopic.trim(),
 
-      lowThreshold: Math.max(1, Math.min(99, parseFloat(lowThreshold) || 20)),
-      criticalThreshold: Math.max(1, Math.min(99, parseFloat(criticalThreshold) || 10)),
-      highThreshold: Math.max(1, Math.min(100, parseFloat(highThreshold) || 90)),
+      lowThreshold: parseInt(lowThreshold, 10) || 20,
+      criticalThreshold: parseInt(criticalThreshold, 10) || 10,
+      highThreshold: parseInt(highThreshold, 10) || 90,
       notificationsEnabled,
+
+      // Auto Pump Automation
+      autoPumpEnabled,
+      autoPumpStartPercent: Math.min(60, Math.max(5, parseInt(autoPumpStartPercent, 10) || 20)),
+      autoPumpStopPercent: Math.min(100, Math.max(65, parseInt(autoPumpStopPercent, 10) || 95)),
     };
 
     const updatedFb = {
@@ -529,6 +542,67 @@ export const SystemSetupScreen = ({
                 editable={isParent}
               />
             </View>
+
+            <View style={styles.divider} />
+
+            {/* Automatic Pump Automation Card */}
+            <View style={styles.sectionHeaderRow}>
+              <MaterialCommunityIcons name="water-pump" size={18} color={COLORS.primary} />
+              <Text style={styles.sectionCardTitle}>Automatic Pump Control</Text>
+            </View>
+
+            <View style={styles.switchRow}>
+              <View style={styles.switchTextWrap}>
+                <Text style={styles.switchTitle}>Enable Auto Pumping</Text>
+                <Text style={styles.switchSub}>
+                  Turn motor on/off automatically based on tank percentage
+                </Text>
+              </View>
+              <Switch
+                value={autoPumpEnabled}
+                onValueChange={setAutoPumpEnabled}
+                trackColor={{ false: '#cbd5e1', true: COLORS.primary }}
+                thumbColor="#ffffff"
+                disabled={!isParent}
+              />
+            </View>
+
+            {autoPumpEnabled && (
+              <>
+                <View style={styles.inputGroup}>
+                  <Text style={styles.inputLabel}>Auto-Start Min Level (%)</Text>
+                  <TextInput
+                    style={[styles.input, !isParent && styles.inputDisabled]}
+                    value={autoPumpStartPercent}
+                    onChangeText={setAutoPumpStartPercent}
+                    keyboardType="numeric"
+                    placeholder="20"
+                    placeholderTextColor="#94a3b8"
+                    editable={isParent}
+                  />
+                </View>
+
+                <View style={styles.inputGroup}>
+                  <Text style={styles.inputLabel}>Auto-Stop Max Level (%)</Text>
+                  <TextInput
+                    style={[styles.input, !isParent && styles.inputDisabled]}
+                    value={autoPumpStopPercent}
+                    onChangeText={setAutoPumpStopPercent}
+                    keyboardType="numeric"
+                    placeholder="95"
+                    placeholderTextColor="#94a3b8"
+                    editable={isParent}
+                  />
+                </View>
+
+                <View style={styles.cooldownNoticeBox}>
+                  <MaterialCommunityIcons name="shield-check-outline" size={16} color="#059669" />
+                  <Text style={styles.cooldownNoticeText}>
+                    Anti-burnout cooldown (20s) is strictly enforced between pump cycles to prevent motor damage.
+                  </Text>
+                </View>
+              </>
+            )}
           </View>
         )}
 
@@ -950,6 +1024,40 @@ const styles = StyleSheet.create({
     fontFamily: FONTS.semiBold,
     fontSize: 12.5,
     color: COLORS.textPrimary,
+  },
+  switchSub: {
+    fontFamily: FONTS.regular,
+    fontSize: 11,
+    color: COLORS.textMuted,
+  },
+  sectionHeaderRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    marginTop: 4,
+  },
+  sectionCardTitle: {
+    fontFamily: FONTS.bold,
+    fontSize: 13.5,
+    color: COLORS.textPrimary,
+  },
+  cooldownNoticeBox: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    backgroundColor: '#ECFDF5',
+    borderColor: '#A7F3D0',
+    borderWidth: 1,
+    borderRadius: 10,
+    padding: 10,
+    marginTop: 4,
+  },
+  cooldownNoticeText: {
+    flex: 1,
+    fontFamily: FONTS.medium,
+    fontSize: 11.5,
+    color: '#065F46',
+    lineHeight: 16,
   },
   otaDetailsBox: {
     backgroundColor: COLORS.background,

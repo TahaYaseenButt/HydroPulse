@@ -9,6 +9,7 @@ export const MotorControlCard = ({
   motorState = false,
   cooldownRemaining = 0,
   isMotorLoading = false,
+  settings,
   onStartMotor,
   onStopMotor,
   isConnected = false,
@@ -379,6 +380,16 @@ export const MotorControlCard = ({
         </View>
       </View>
 
+      {/* Auto Pumping Indicator Badge */}
+      {settings?.autoPumpEnabled && (
+        <View style={styles.autoPill}>
+          <MaterialCommunityIcons name="robot" size={13} color="#059669" />
+          <Text style={styles.autoPillText}>
+            Auto Pumping: Starts ≤ {settings.autoPumpStartPercent || 20}% • Stops ≥ {settings.autoPumpStopPercent || 95}%
+          </Text>
+        </View>
+      )}
+
       {/* Action Buttons */}
       <View style={styles.btnRow}>
         <TouchableOpacity
@@ -410,7 +421,7 @@ export const MotorControlCard = ({
             ]}
           >
             {isMotorLoading && !motorState
-              ? 'Starting...'
+              ? 'Waiting for Controller...'
               : !isDeviceOnline
               ? 'Offline'
               : !isParent
@@ -448,7 +459,7 @@ export const MotorControlCard = ({
             ]}
           >
             {isMotorLoading && motorState
-              ? 'Stopping...'
+              ? 'Waiting for Controller...'
               : !isDeviceOnline
               ? 'Offline'
               : !isParent
@@ -694,8 +705,26 @@ const styles = StyleSheet.create({
   },
   telemetryValue: {
     fontFamily: FONTS.bold,
-    fontSize: 13,
+    fontSize: 12,
     color: COLORS.textPrimary,
+  },
+  autoPill: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    backgroundColor: '#ECFDF5',
+    borderWidth: 1,
+    borderColor: '#A7F3D0',
+    borderRadius: 8,
+    paddingHorizontal: 10,
+    paddingVertical: 6,
+    marginTop: 12,
+    marginBottom: 4,
+  },
+  autoPillText: {
+    fontFamily: FONTS.semiBold,
+    fontSize: 11,
+    color: '#065F46',
   },
   telemetryDivider: {
     width: 1,
@@ -706,7 +735,8 @@ const styles = StyleSheet.create({
   /* ── Buttons ── */
   btnRow: {
     flexDirection: 'row',
-    gap: 10,
+    gap: 12,
+    marginTop: 12,
   },
   btnStart: {
     flex: 1,

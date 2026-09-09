@@ -25,6 +25,7 @@ export const ReservoirScreen = ({
   motorState = false,
   cooldownRemaining = 0,
   isMotorLoading = false,
+  settings,
   onStartMotor,
   onStopMotor,
   isConnected = true,
@@ -150,7 +151,17 @@ export const ReservoirScreen = ({
         />
       </View>
 
-      {/* ── Motor Toggle Button (Server-Confirmed Save) ── */}
+      {/* ── Auto Mode Active Pill Badge ── */}
+      {settings?.autoPumpEnabled && (
+        <View style={styles.autoModeChip}>
+          <MaterialCommunityIcons name="robot" size={14} color="#059669" />
+          <Text style={styles.autoModeText}>
+            Auto Pump Active: Starts ≤ {settings.autoPumpStartPercent || 20}% • Stops ≥ {settings.autoPumpStopPercent || 95}%
+          </Text>
+        </View>
+      )}
+
+      {/* ── Motor Toggle Button (Hardware-ACK Confirmed) ── */}
       <TouchableOpacity
         style={[
           styles.motorBtn,
@@ -177,7 +188,7 @@ export const ReservoirScreen = ({
           {!isDeviceOnline
             ? 'Controller Offline'
             : isMotorLoading
-            ? (motorState ? 'Stopping Pump in Cloud...' : 'Starting Pump in Cloud...')
+            ? (motorState ? 'Stopping (Waiting for Controller...)' : 'Starting (Waiting for Controller...)')
             : motorState
             ? `Turn Off Motor${cooldownRemaining > 0 ? ` (${cooldownRemaining}s)` : ''}`
             : `Turn On Motor${cooldownRemaining > 0 ? ` (${cooldownRemaining}s)` : ''}`}
@@ -322,6 +333,25 @@ const styles = StyleSheet.create({
     flex: 1,
     alignItems: 'center',
     justifyContent: 'center',
+  },
+
+  /* ── Auto Mode Indicator ── */
+  autoModeChip: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    backgroundColor: '#ECFDF5',
+    borderWidth: 1,
+    borderColor: '#A7F3D0',
+    borderRadius: 20,
+    paddingHorizontal: 12,
+    paddingVertical: 5,
+    marginBottom: 8,
+  },
+  autoModeText: {
+    fontFamily: FONTS.semiBold,
+    fontSize: 11,
+    color: '#065F46',
   },
 
   /* ── Motor Button ── */

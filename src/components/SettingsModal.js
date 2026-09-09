@@ -41,6 +41,10 @@ export const SettingsModal = ({
     settings.notificationsEnabled !== undefined ? settings.notificationsEnabled : true
   );
 
+  const [autoPumpEnabled, setAutoPumpEnabled] = useState(settings.autoPumpEnabled || false);
+  const [autoPumpStartPercent, setAutoPumpStartPercent] = useState(String(settings.autoPumpStartPercent || 20));
+  const [autoPumpStopPercent, setAutoPumpStopPercent] = useState(String(settings.autoPumpStopPercent || 95));
+
   // Sync state whenever modal is opened or settings change
   useEffect(() => {
     if (visible && settings) {
@@ -62,6 +66,10 @@ export const SettingsModal = ({
       setNotificationsEnabled(
         settings.notificationsEnabled !== undefined ? settings.notificationsEnabled : true
       );
+
+      setAutoPumpEnabled(settings.autoPumpEnabled || false);
+      setAutoPumpStartPercent(String(settings.autoPumpStartPercent || 20));
+      setAutoPumpStopPercent(String(settings.autoPumpStopPercent || 95));
     }
   }, [visible, settings]);
 
@@ -84,6 +92,10 @@ export const SettingsModal = ({
       criticalThreshold: Math.max(1, Math.min(99, parseFloat(criticalThreshold) || 10)),
       highThreshold: Math.max(1, Math.min(100, parseFloat(highThreshold) || 90)),
       notificationsEnabled,
+
+      autoPumpEnabled,
+      autoPumpStartPercent: Math.min(60, Math.max(5, parseInt(autoPumpStartPercent, 10) || 20)),
+      autoPumpStopPercent: Math.min(100, Math.max(65, parseInt(autoPumpStopPercent, 10) || 95)),
     };
 
     onSaveSettings(updated);
@@ -325,6 +337,59 @@ export const SettingsModal = ({
                   />
                   <Text style={styles.hint}>Alerts when tank is full so you can shut off pump (default 90%)</Text>
                 </View>
+
+                {/* Auto Pumping Automation Section */}
+                <View style={{ height: 1, backgroundColor: '#e2e8f0', marginVertical: 12 }} />
+
+                <View style={styles.switchRow}>
+                  <View style={styles.switchTextWrap}>
+                    <Text style={styles.switchTitle}>Enable Auto Pumping</Text>
+                    <Text style={styles.switchSub}>Turn pump ON/OFF automatically based on level</Text>
+                  </View>
+                  <Switch
+                    value={autoPumpEnabled}
+                    onValueChange={setAutoPumpEnabled}
+                    trackColor={{ false: '#cbd5e1', true: '#0284c7' }}
+                    thumbColor="#ffffff"
+                  />
+                </View>
+
+                {autoPumpEnabled && (
+                  <>
+                    <View style={styles.inputGroup}>
+                      <Text style={styles.inputLabel}>Auto-Start Min Water Level (%)</Text>
+                      <TextInput
+                        style={styles.input}
+                        value={autoPumpStartPercent}
+                        onChangeText={setAutoPumpStartPercent}
+                        keyboardType="numeric"
+                        placeholder="20"
+                        placeholderTextColor="#94a3b8"
+                      />
+                      <Text style={styles.hint}>Turn pump ON when tank drops to or below this % (e.g. 20%)</Text>
+                    </View>
+
+                    <View style={styles.inputGroup}>
+                      <Text style={styles.inputLabel}>Auto-Stop Max Water Level (%)</Text>
+                      <TextInput
+                        style={styles.input}
+                        value={autoPumpStopPercent}
+                        onChangeText={setAutoPumpStopPercent}
+                        keyboardType="numeric"
+                        placeholder="95"
+                        placeholderTextColor="#94a3b8"
+                      />
+                      <Text style={styles.hint}>Turn pump OFF when tank fills to or above this % (e.g. 95%)</Text>
+                    </View>
+
+                    <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6, backgroundColor: '#ecfdf5', padding: 10, borderRadius: 8, marginTop: 4, borderWidth: 1, borderColor: '#a7f3d0' }}>
+                      <MaterialCommunityIcons name="shield-check-outline" size={16} color="#059669" />
+                      <Text style={{ flex: 1, fontSize: 11.5, color: '#065f46' }}>
+                        The 20-second safety cooldown is always enforced between pump cycles.
+                      </Text>
+                    </View>
+                  </>
+                )}
               </View>
             )}
 

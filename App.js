@@ -148,9 +148,12 @@ export default function App() {
   const [motorState, setMotorState] = useState(false);
   const motorStateRef = useRef(false);
   const [cooldownRemaining, setCooldownRemaining] = useState(0);
+  const cooldownRemainingRef = useRef(0);
   const cooldownEndRef = useRef(0);
   const [isCooldownModalVisible, setIsCooldownModalVisible] = useState(false);
   const [isMotorLoading, setIsMotorLoading] = useState(false);
+  const pendingMotorCommandRef = useRef(null);
+  const pendingMotorTimeoutRef = useRef(null);
 
   const updateMotorState = (val) => {
     motorStateRef.current = val;
@@ -164,6 +167,7 @@ export default function App() {
     const interval = setInterval(() => {
       const remainingMs = cooldownEndRef.current - Date.now();
       const secs = Math.max(0, Math.ceil(remainingMs / 1000));
+      cooldownRemainingRef.current = secs;
       setCooldownRemaining(secs);
       if (secs <= 0) {
         clearInterval(interval);
@@ -288,6 +292,10 @@ export default function App() {
             if (data.version) {
               setEsp32FirmwareVersion(data.version);
             }
+            if (data.motor !== undefined) {
+              const mStatus = typeof data.motor === 'boolean' ? (data.motor ? 'ON' : 'OFF') : String(data.motor).toUpperCase();
+              handleMotorStatusMessage(mStatus);
+            }
           } catch (e) {}
         } else if (topic === activeSettings.mqttTopic || topic === 'waterlevel/distance') {
           handleDistancePayload(payload, 'ESP32');
@@ -400,6 +408,29 @@ export default function App() {
     setFlowStatus(rateStatus);
     setTimeEstimate(estTime);
 
+    // ── Automatic Pumping Engine (User-defined Min & Max water percentage) ──
+    // Strictly honors the 20-second safety cooldown between pump cycles!
+    if (
+      settings.autoPumpEnabled &&
+      isDeviceOnline &&
+      !isMotorLoading &&
+      cooldownRemainingRef.current <= 0
+    ) {
+      const minWater = Number(settings.autoPumpStartPercent ?? 20);
+      const maxWater = Number(settings.autoPumpStopPercent ?? 95);
+
+      // Auto-Start: Water level is at or below the minimum threshold and motor is currently OFF
+      if (roundedPercent <= minWater && !motorStateRef.current) {
+        console.log(`[AutoPump] Level (${roundedPercent}%) <= Min (${minWater}%). Automatically starting pump...`);
+        handleStartMotor({ isAuto: true });
+      }
+      // Auto-Stop: Water level reached or exceeded the maximum threshold and motor is currently ON
+      else if (roundedPercent >= maxWater && motorStateRef.current) {
+        console.log(`[AutoPump] Level (${roundedPercent}%) >= Max (${maxWater}%). Automatically stopping pump...`);
+        handleStopMotor({ isAuto: true });
+      }
+    }
+
     // Real System/Device Notifications (Lock screen & notification drawer)
     if (settings.notificationsEnabled !== false) {
       checkAndTriggerTankAlerts({
@@ -451,9 +482,19 @@ export default function App() {
     appendTelemetryLog(logItem).then((updated) => setTelemetryLogs(updated));
   };
 
-  // 4. Motor State & Anti-Burnout Cooldown Handling (20s safety cooldown)
+  // 4. Motor State & Anti-Burnout Cooldown Handling (Strict Hardware Controller ACK)
   const handleMotorStatusMessage = (statusStr) => {
-    const isNowOn = statusStr === 'ON';
+    const isNowOn = statusStr === 'ON' || statusStr === '1' || statusStr === true;
+
+    // Clear watchdog timer because controller has actively acknowledged the command!
+    if (pendingMotorTimeoutRef.current) {
+      clearTimeout(pendingMotorTimeoutRef.current);
+      pendingMotorTimeoutRef.current = null;
+    }
+    pendingMotorCommandRef.current = null;
+    setIsMotorLoading(false);
+
+    // Apply the confirmed hardware state!
     if (motorStateRef.current !== isNowOn) {
       updateMotorState(isNowOn);
       if (isNowOn) {
@@ -470,22 +511,25 @@ export default function App() {
 
   const startCooldown = (seconds = 20) => {
     cooldownEndRef.current = Date.now() + seconds * 1000;
+    cooldownRemainingRef.current = seconds;
     setCooldownRemaining(seconds);
     saveWidgetData({ motorState: motorStateRef.current, cooldownRemaining: seconds });
   };
 
   // 5. Protected Motor Controls (Parent Role Authorized Only!)
-  // Animation and motor activation strictly depend on server save confirmation
-  const handleStartMotor = async () => {
+  // Animation and motor activation strictly depend on hardware controller ACK!
+  const handleStartMotor = async (options = {}) => {
     if (isMotorLoading) return;
 
-    if (cooldownRemaining > 0) {
-      triggerHaptic.warning();
-      setIsCooldownModalVisible(true);
+    if (cooldownRemainingRef.current > 0) {
+      if (!options.isAuto) {
+        triggerHaptic.warning();
+        setIsCooldownModalVisible(true);
+      }
       return;
     }
 
-    if (activeUser?.role !== 'parent') {
+    if (!options.isAuto && activeUser?.role !== 'parent') {
       triggerHaptic.warning();
       Alert.alert(
         'Parent Access Required',
@@ -498,45 +542,48 @@ export default function App() {
       return;
     }
 
-    triggerHaptic.medium();
+    if (!options.isAuto) triggerHaptic.medium();
     setIsMotorLoading(true);
+    pendingMotorCommandRef.current = 'ON';
+
+    // 10-second watchdog timeout for controller acknowledgment
+    if (pendingMotorTimeoutRef.current) clearTimeout(pendingMotorTimeoutRef.current);
+    pendingMotorTimeoutRef.current = setTimeout(() => {
+      if (pendingMotorCommandRef.current === 'ON') {
+        pendingMotorCommandRef.current = null;
+        setIsMotorLoading(false);
+        triggerHaptic.warning();
+        Alert.alert(
+          'Controller Not Responding',
+          'The water controller did not confirm the motor start command within 10 seconds. Check device power and connection.'
+        );
+      }
+    }, 10000);
 
     // 1. Dispatch command to hardware controller via MQTT
     if (mqttClientRef.current) {
       mqttClientRef.current.publish(settings.mqttTopicMotorSet, 'ON');
-      mqttClientRef.current.publish(settings.mqttTopicMotorStatus, 'ON', true);
     }
 
-    // 2. Persist motor state + user id in Cloud Database
-    const res = await pushMotorCommandToFirebase('ON', activeUser);
-    setIsMotorLoading(false);
-
-    if (res && res.success) {
-      // 3. Trigger state and water animation ONLY upon confirmed server save!
-      updateMotorState(true);
-      startCooldown(20);
-      readingHistoryRef.current = [];
-      setFlowStatus('filling');
-      saveWidgetData({ motorState: true, cooldownRemaining: 20 });
-    } else if (res && res.blocked) {
-      triggerHaptic.warning();
-      Alert.alert('Access Denied', res.error || 'Only Parent can turn on the motor.');
-    } else {
-      triggerHaptic.warning();
-      Alert.alert('Notice', 'Command dispatched. Syncing status with server...');
-    }
+    // 2. Persist intent to Cloud Database with user ID
+    const requestingUser = options.isAuto
+      ? { uid: activeUser?.uid || 'auto_pump_sentinel', displayName: 'Auto-Pump Sentinel', role: 'parent', deviceId: activeUser?.deviceId || 'TANK-01' }
+      : activeUser;
+    await pushMotorCommandToFirebase('ON', requestingUser);
   };
 
-  const handleStopMotor = async () => {
+  const handleStopMotor = async (options = {}) => {
     if (isMotorLoading) return;
 
-    if (cooldownRemaining > 0) {
-      triggerHaptic.warning();
-      setIsCooldownModalVisible(true);
+    if (cooldownRemainingRef.current > 0) {
+      if (!options.isAuto) {
+        triggerHaptic.warning();
+        setIsCooldownModalVisible(true);
+      }
       return;
     }
 
-    if (activeUser?.role !== 'parent') {
+    if (!options.isAuto && activeUser?.role !== 'parent') {
       triggerHaptic.warning();
       Alert.alert(
         'Parent Access Required',
@@ -549,33 +596,34 @@ export default function App() {
       return;
     }
 
-    triggerHaptic.medium();
+    if (!options.isAuto) triggerHaptic.medium();
     setIsMotorLoading(true);
+    pendingMotorCommandRef.current = 'OFF';
+
+    // 10-second watchdog timeout for controller acknowledgment
+    if (pendingMotorTimeoutRef.current) clearTimeout(pendingMotorTimeoutRef.current);
+    pendingMotorTimeoutRef.current = setTimeout(() => {
+      if (pendingMotorCommandRef.current === 'OFF') {
+        pendingMotorCommandRef.current = null;
+        setIsMotorLoading(false);
+        triggerHaptic.warning();
+        Alert.alert(
+          'Controller Not Responding',
+          'The water controller did not confirm the motor stop command within 10 seconds. Check device power and connection.'
+        );
+      }
+    }, 10000);
 
     // 1. Dispatch command to hardware controller via MQTT
     if (mqttClientRef.current) {
       mqttClientRef.current.publish(settings.mqttTopicMotorSet, 'OFF');
-      mqttClientRef.current.publish(settings.mqttTopicMotorStatus, 'OFF', true);
     }
 
-    // 2. Persist motor state + user id in Cloud Database
-    const res = await pushMotorCommandToFirebase('OFF', activeUser);
-    setIsMotorLoading(false);
-
-    if (res && res.success) {
-      // 3. Immediately stop water animation and reset state upon confirmed server save!
-      updateMotorState(false);
-      startCooldown(20);
-      readingHistoryRef.current = [];
-      setFlowStatus('stable');
-      saveWidgetData({ motorState: false, cooldownRemaining: 20 });
-    } else if (res && res.blocked) {
-      triggerHaptic.warning();
-      Alert.alert('Access Denied', res.error || 'Only Parent can turn off the motor.');
-    } else {
-      triggerHaptic.warning();
-      Alert.alert('Notice', 'Command dispatched. Syncing status with server...');
-    }
+    // 2. Persist intent to Cloud Database with user ID
+    const requestingUser = options.isAuto
+      ? { uid: activeUser?.uid || 'auto_pump_sentinel', displayName: 'Auto-Pump Sentinel', role: 'parent', deviceId: activeUser?.deviceId || 'TANK-01' }
+      : activeUser;
+    await pushMotorCommandToFirebase('OFF', requestingUser);
   };
 
   // 6. Role Selection Handler
@@ -738,6 +786,7 @@ export default function App() {
               lastSeenText={getEsp32LastSeenText()}
               userRole={activeUser?.role}
               deviceId={activeUser?.deviceId || 'TANK-01'}
+              settings={settings}
               onOpenRoleModal={() => setIsRoleModalVisible(true)}
               onShowCooldown={() => setIsCooldownModalVisible(true)}
             />
@@ -770,6 +819,7 @@ export default function App() {
               isDeviceOnline={isDeviceOnline}
               lastSeenText={getEsp32LastSeenText()}
               userRole={activeUser?.role}
+              settings={settings}
               onOpenRoleModal={() => setIsRoleModalVisible(true)}
               onShowCooldown={() => setIsCooldownModalVisible(true)}
             />

@@ -8,6 +8,7 @@ export const PumpPowerScreen = ({
   motorState,
   cooldownRemaining,
   isMotorLoading = false,
+  settings,
   onStartMotor,
   onStopMotor,
   isConnected,
@@ -53,6 +54,7 @@ export const PumpPowerScreen = ({
         motorState={motorState}
         cooldownRemaining={cooldownRemaining}
         isMotorLoading={isMotorLoading}
+        settings={settings}
         onStartMotor={onStartMotor}
         onStopMotor={onStopMotor}
         isConnected={isConnected}
