@@ -141,6 +141,7 @@ export const ReservoirScreen = ({
           lowThreshold={lowThreshold}
           criticalThreshold={criticalThreshold}
           highThreshold={highThreshold}
+          motorState={motorState}
         />
       </View>
 

@@ -1,11 +1,11 @@
 import React, { useEffect, useRef } from 'react';
-import { View, Text, StyleSheet, Animated } from 'react-native';
-import Svg, { Path, Defs, LinearGradient, Stop } from 'react-native-svg';
+import { View, Text, StyleSheet, Animated, Easing } from 'react-native';
+import Svg, { Path, Defs, LinearGradient, Stop, Circle } from 'react-native-svg';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { COLORS, FONTS } from '../constants/theme';
 
-const TANK_WIDTH = 220;
-const TANK_HEIGHT = 280;
+const TANK_WIDTH = 224;
+const TANK_HEIGHT = 284;
 const WAVELENGTH = 220;
 const TOTAL_WAVE_WIDTH = WAVELENGTH * 3;
 
@@ -17,27 +17,46 @@ export const WaterTankView = ({
   lowThreshold = 20,
   criticalThreshold = 10,
   highThreshold = 90,
+  motorState = false,
 }) => {
   const clampedPercent = Math.max(0, Math.min(100, percentage));
   const animatedPercent = useRef(new Animated.Value(clampedPercent)).current;
 
-  // Horizontal wave travel animation
+  // Horizontal wave travel animations
   const waveAnim1 = useRef(new Animated.Value(0)).current;
   const waveAnim2 = useRef(new Animated.Value(0)).current;
 
+  // Rising micro-bubbles
+  const bubble1 = useRef(new Animated.Value(0)).current;
+  const bubble2 = useRef(new Animated.Value(0)).current;
+  const bubble3 = useRef(new Animated.Value(0)).current;
+  const bubble4 = useRef(new Animated.Value(0)).current;
+
+  // Inlet Water Stream & Surface Splash
+  const jetAnim = useRef(new Animated.Value(0)).current;
+  const splashRipple = useRef(new Animated.Value(0)).current;
+
+  // Water level height animation
   useEffect(() => {
     Animated.timing(animatedPercent, {
       toValue: clampedPercent,
       duration: 800,
+      easing: Easing.out(Easing.cubic),
       useNativeDriver: false,
     }).start();
   }, [clampedPercent]);
 
+  // Wave speed dynamic controller (Accelerates when pump is active or water is filling)
+  const isSurging = motorState || flowStatus === 'filling';
   useEffect(() => {
+    const wave1Duration = isSurging ? 1300 : 3200;
+    const wave2Duration = isSurging ? 950 : 2400;
+
     const waveLoop1 = Animated.loop(
       Animated.timing(waveAnim1, {
         toValue: 1,
-        duration: 3400,
+        duration: wave1Duration,
+        easing: Easing.linear,
         useNativeDriver: false,
       })
     );
@@ -45,7 +64,8 @@ export const WaterTankView = ({
     const waveLoop2 = Animated.loop(
       Animated.timing(waveAnim2, {
         toValue: 1,
-        duration: 2500,
+        duration: wave2Duration,
+        easing: Easing.linear,
         useNativeDriver: false,
       })
     );
@@ -57,8 +77,84 @@ export const WaterTankView = ({
       waveLoop1.stop();
       waveLoop2.stop();
     };
-  }, []);
+  }, [isSurging]);
 
+  // Rising micro-bubbles loop
+  useEffect(() => {
+    const createBubbleLoop = (anim, duration, delay) =>
+      Animated.loop(
+        Animated.sequence([
+          Animated.delay(delay),
+          Animated.timing(anim, {
+            toValue: 1,
+            duration: isSurging ? duration * 0.6 : duration,
+            easing: Easing.inOut(Easing.quad),
+            useNativeDriver: true,
+          }),
+          Animated.timing(anim, {
+            toValue: 0,
+            duration: 0,
+            useNativeDriver: true,
+          }),
+        ])
+      );
+
+    const b1Loop = createBubbleLoop(bubble1, 2400, 100);
+    const b2Loop = createBubbleLoop(bubble2, 1900, 600);
+    const b3Loop = createBubbleLoop(bubble3, 2800, 300);
+    const b4Loop = createBubbleLoop(bubble4, 2100, 900);
+
+    b1Loop.start();
+    b2Loop.start();
+    b3Loop.start();
+    b4Loop.start();
+
+    return () => {
+      b1Loop.stop();
+      b2Loop.stop();
+      b3Loop.stop();
+      b4Loop.stop();
+    };
+  }, [isSurging]);
+
+  // Water jet stream & splash ripple loop when motor is active
+  useEffect(() => {
+    if (!motorState) return;
+
+    const jetLoop = Animated.loop(
+      Animated.sequence([
+        Animated.timing(jetAnim, {
+          toValue: 1,
+          duration: 350,
+          useNativeDriver: true,
+        }),
+        Animated.timing(jetAnim, {
+          toValue: 0.6,
+          duration: 350,
+          useNativeDriver: true,
+        }),
+      ])
+    );
+
+    const splashLoop = Animated.loop(
+      Animated.timing(splashRipple, {
+        toValue: 1,
+        duration: 700,
+        easing: Easing.out(Easing.quad),
+        useNativeDriver: true,
+      })
+    );
+
+    jetLoop.start();
+    splashLoop.start();
+
+    return () => {
+      jetLoop.stop();
+      splashLoop.stop();
+    };
+  }, [motorState]);
+
+  // Palette theme based on level thresholds
   const getTheme = () => {
     if (clampedPercent <= criticalThreshold) {
       return {
@@ -67,7 +163,8 @@ export const WaterTankView = ({
         liquidBottom: '#e11d48',
         crestSheen: '#fecdd3',
         backWave: 'rgba(248, 113, 113, 0.45)',
-        glow: 'rgba(225, 29, 72, 0.25)',
+        glow: 'rgba(239, 68, 68, 0.18)',
+        borderColor: 'rgba(239, 68, 68, 0.3)',
       };
     }
     if (clampedPercent <= lowThreshold) {
@@ -77,7 +174,19 @@ export const WaterTankView = ({
         liquidBottom: '#d97706',
         crestSheen: '#fde68a',
         backWave: 'rgba(251, 191, 36, 0.45)',
-        glow: 'rgba(217, 119, 6, 0.25)',
+        glow: 'rgba(245, 158, 11, 0.18)',
+        borderColor: 'rgba(245, 158, 11, 0.3)',
+      };
+    }
+    if (clampedPercent >= highThreshold) {
+      return {
+        surfaceWave: '#34d399',
+        liquidTop: '#10b981',
+        liquidBottom: '#059669',
+        crestSheen: '#a7f3d0',
+        backWave: 'rgba(52, 211, 153, 0.45)',
+        glow: 'rgba(16, 185, 129, 0.18)',
+        borderColor: 'rgba(16, 185, 129, 0.3)',
       };
     }
     return {
@@ -86,7 +195,8 @@ export const WaterTankView = ({
       liquidBottom: '#0284c7',
       crestSheen: '#bae6fd',
       backWave: 'rgba(56, 189, 248, 0.45)',
-      glow: 'rgba(2, 132, 199, 0.25)',
+      glow: 'rgba(2, 132, 199, 0.18)',
+      borderColor: 'rgba(2, 132, 199, 0.22)',
     };
   };
 
@@ -94,7 +204,7 @@ export const WaterTankView = ({
 
   const liquidHeight = animatedPercent.interpolate({
     inputRange: [0, 100],
-    outputRange: [16, TANK_HEIGHT],
+    outputRange: [18, TANK_HEIGHT],
   });
 
   const wave1TranslateX = waveAnim1.interpolate({
@@ -147,11 +257,19 @@ export const WaterTankView = ({
 
   return (
     <View style={styles.container}>
-      {/* Main Glass Cylindrical Reservoir */}
-      <View style={styles.glassVessel}>
-        {/* Specular curved reflections */}
+      {/* Dynamic Ambient Back-Glow Halo */}
+      <View style={[styles.ambientBackGlow, { backgroundColor: theme.glow }]} />
+
+      {/* Main Glass Cylindrical Vessel */}
+      <View style={[styles.glassVessel, { borderColor: theme.borderColor }]}>
+        {/* Specular Curved Reflections */}
         <View style={styles.specularGlareLeft} />
         <View style={styles.specularGlareRight} />
+
+        {/* Top Nozzle / Inlet Fitting */}
+        <View style={styles.topInletFitting}>
+          <View style={styles.nozzleCap} />
+        </View>
 
         {/* Level Ruler Scale (100%, 75%, 50%, 25%, 0%) */}
         <View style={styles.rulerContainer}>
@@ -178,6 +296,42 @@ export const WaterTankView = ({
           })}
         </View>
 
+        {/* Active Pump Inlet Water Jet Stream pouring from top */}
+        {motorState && clampedPercent < 98 && (
+          <View style={styles.jetStreamContainer}>
+            <Animated.View
+              style={[
+                styles.jetStreamInner,
+                {
+                  opacity: jetAnim.interpolate({
+                    inputRange: [0.6, 1],
+                    outputRange: [0.75, 1],
+                  }),
+                  transform: [
+                    {
+                      scaleX: jetAnim.interpolate({
+                        inputRange: [0.6, 1],
+                        outputRange: [0.9, 1.1],
+                      }),
+                    },
+                  ],
+                },
+              ]}
+            >
+              <Svg width={12} height={TANK_HEIGHT} viewBox="0 0 12 280">
+                <Defs>
+                  <LinearGradient id="streamGrad" x1="0" y1="0" x2="1" y2="0">
+                    <Stop offset="0" stopColor="rgba(255, 255, 255, 0.4)" />
+                    <Stop offset="0.5" stopColor="rgba(14, 165, 233, 0.9)" />
+                    <Stop offset="1" stopColor="rgba(255, 255, 255, 0.4)" />
+                  </LinearGradient>
+                </Defs>
+                <Path d="M 3 0 Q 6 140 4 280 L 8 280 Q 6 140 9 0 Z" fill="url(#streamGrad)" />
+              </Svg>
+            </Animated.View>
+          </View>
+        )}
+
         {/* Animated Fluid Liquid Body */}
         <Animated.View
           style={[
@@ -187,7 +341,7 @@ export const WaterTankView = ({
             },
           ]}
         >
-          {/* Back undulating wave */}
+          {/* Back Undulating Wave */}
           <Animated.View
             style={[
               styles.waveAbsoluteLayer,
@@ -201,7 +355,40 @@ export const WaterTankView = ({
             </Svg>
           </Animated.View>
 
-          {/* Front fluid mass with gradient and crest sheen */}
+          {/* Rising Translucent Micro-Bubbles */}
+          {[
+            { anim: bubble1, left: '26%', size: 5 },
+            { anim: bubble2, left: '46%', size: 7 },
+            { anim: bubble3, left: '70%', size: 4 },
+            { anim: bubble4, left: '36%', size: 6 },
+          ].map((b, idx) => (
+            <Animated.View
+              key={idx}
+              style={[
+                styles.microBubble,
+                {
+                  left: b.left,
+                  width: b.size,
+                  height: b.size,
+                  borderRadius: b.size / 2,
+                  transform: [
+                    {
+                      translateY: b.anim.interpolate({
+                        inputRange: [0, 1],
+                        outputRange: [170, 0],
+                      }),
+                    },
+                  ],
+                  opacity: b.anim.interpolate({
+                    inputRange: [0, 0.2, 0.7, 1],
+                    outputRange: [0, 0.8, 0.8, 0],
+                  }),
+                },
+              ]}
+            />
+          ))}
+
+          {/* Front Fluid Mass with Gradient and Crest Sheen */}
           <Animated.View
             style={[
               styles.waveAbsoluteLayer,
@@ -224,10 +411,33 @@ export const WaterTankView = ({
                 stroke={theme.crestSheen}
                 strokeWidth="2"
                 fill="none"
-                opacity="0.9"
+                opacity="0.95"
               />
             </Svg>
           </Animated.View>
+
+          {/* Water Surface Splash Ripple Effect when motor is pouring */}
+          {motorState && clampedPercent < 98 && (
+            <Animated.View
+              style={[
+                styles.splashRippleCircle,
+                {
+                  transform: [
+                    {
+                      scale: splashRipple.interpolate({
+                        inputRange: [0, 1],
+                        outputRange: [0.4, 1.8],
+                      }),
+                    },
+                  ],
+                  opacity: splashRipple.interpolate({
+                    inputRange: [0, 0.5, 1],
+                    outputRange: [0.8, 0.5, 0],
+                  }),
+                },
+              ]}
+            />
+          )}
         </Animated.View>
 
         {/* Center Percentage & Liters Display */}
@@ -266,45 +476,24 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     paddingVertical: 10,
+    position: 'relative',
   },
-  topSensorNode: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 5,
-    backgroundColor: COLORS.surface,
-    paddingHorizontal: 12,
-    paddingVertical: 4,
-    borderRadius: 12,
-    borderWidth: 1,
-    borderColor: COLORS.border,
-    marginBottom: 8,
-    shadowColor: COLORS.primary,
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.05,
-    shadowRadius: 4,
-    elevation: 2,
-  },
-  sensorDot: {
-    width: 6,
-    height: 6,
-    borderRadius: 3,
-    backgroundColor: COLORS.primary,
-  },
-  sensorText: {
-    fontFamily: FONTS.bold,
-    fontSize: 9.5,
-    color: COLORS.textMuted,
-    letterSpacing: 0.8,
+  ambientBackGlow: {
+    position: 'absolute',
+    width: TANK_WIDTH + 50,
+    height: TANK_HEIGHT + 40,
+    borderRadius: 60,
+    zIndex: 1,
   },
   glassVessel: {
     width: TANK_WIDTH,
     height: TANK_HEIGHT,
     borderRadius: 36,
     borderWidth: 2,
-    borderColor: 'rgba(2, 132, 199, 0.22)',
     backgroundColor: COLORS.white,
     overflow: 'hidden',
     position: 'relative',
+    zIndex: 10,
     shadowColor: COLORS.primary,
     shadowOffset: { width: 0, height: 8 },
     shadowOpacity: 0.08,
@@ -330,6 +519,28 @@ const styles = StyleSheet.create({
     backgroundColor: 'rgba(255, 255, 255, 0.35)',
     borderRadius: 2,
     zIndex: 20,
+  },
+  topInletFitting: {
+    position: 'absolute',
+    top: 0,
+    alignSelf: 'center',
+    width: 32,
+    height: 6,
+    backgroundColor: '#E2E8F0',
+    borderBottomLeftRadius: 6,
+    borderBottomRightRadius: 6,
+    alignItems: 'center',
+    zIndex: 25,
+    borderWidth: 1,
+    borderTopWidth: 0,
+    borderColor: '#CBD5E1',
+  },
+  nozzleCap: {
+    width: 14,
+    height: 3,
+    backgroundColor: '#94A3B8',
+    borderRadius: 2,
+    marginTop: 1,
   },
   rulerContainer: {
     position: 'absolute',
@@ -365,6 +576,19 @@ const styles = StyleSheet.create({
   rulerDashInWater: {
     backgroundColor: 'rgba(255, 255, 255, 0.95)',
   },
+  jetStreamContainer: {
+    position: 'absolute',
+    top: 6,
+    alignSelf: 'center',
+    width: 12,
+    height: '100%',
+    zIndex: 15,
+    alignItems: 'center',
+  },
+  jetStreamInner: {
+    width: 12,
+    height: '100%',
+  },
   liquidBody: {
     width: '100%',
     position: 'absolute',
@@ -380,6 +604,26 @@ const styles = StyleSheet.create({
     left: 0,
     width: TOTAL_WAVE_WIDTH,
     height: 350,
+  },
+  microBubble: {
+    position: 'absolute',
+    bottom: 10,
+    backgroundColor: 'rgba(255, 255, 255, 0.85)',
+    borderWidth: 0.5,
+    borderColor: 'rgba(255, 255, 255, 0.95)',
+    zIndex: 18,
+  },
+  splashRippleCircle: {
+    position: 'absolute',
+    top: 6,
+    alignSelf: 'center',
+    width: 28,
+    height: 12,
+    borderRadius: 14,
+    borderWidth: 1.5,
+    borderColor: 'rgba(255, 255, 255, 0.9)',
+    backgroundColor: 'rgba(255, 255, 255, 0.2)',
+    zIndex: 19,
   },
   waterTextCenter: {
     position: 'absolute',
@@ -418,15 +662,5 @@ const styles = StyleSheet.create({
   litersTextDark: {
     color: COLORS.primary,
     textShadowColor: 'transparent',
-  },
-  ambientGlowPool: {
-    width: 160,
-    height: 10,
-    borderRadius: 80,
-    marginTop: 8,
-    shadowColor: COLORS.primary,
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.3,
-    shadowRadius: 10,
   },
 });
