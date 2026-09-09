@@ -11,7 +11,7 @@
     },
     "android": {
       "package": "com.hydropulse.waterlevelsensing",
-      "versionCode": 3,
+      "versionCode": 4,
       "softwareKeyboardLayoutMode": "pan",
       "adaptiveIcon": {
         "backgroundColor": "#0276FF",
