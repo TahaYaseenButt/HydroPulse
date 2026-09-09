@@ -24,12 +24,23 @@ export function HydroPulseNativeWidget({
   const pumpText = motorState ? 'PUMP ON' : 'STANDBY';
 
   // Flow status label
+  const isOffline = flowStatus === 'offline';
   const flowLabel =
-    flowStatus === 'filling'
+    isOffline
+      ? '● ESP32 Offline'
+      : flowStatus === 'filling'
       ? '↑ Filling'
       : flowStatus === 'dropping'
       ? '↓ Using Water'
       : '● Stable Level';
+  const flowColor =
+    isOffline
+      ? '#EF4444'
+      : flowStatus === 'filling'
+      ? '#10B981'
+      : flowStatus === 'dropping'
+      ? '#EF4444'
+      : '#64748B';
 
   return (
     <FlexWidget
@@ -261,7 +272,7 @@ export function HydroPulseNativeWidget({
           style={{
             fontSize: 11,
             fontWeight: '600',
-            color: flowStatus === 'filling' ? '#10B981' : flowStatus === 'dropping' ? '#EF4444' : '#64748B',
+            color: flowColor,
           }}
         />
         <TextWidget

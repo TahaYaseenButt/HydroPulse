@@ -25,6 +25,8 @@ export const SystemSetupScreen = ({
   onResetSettings,
   onCheckFirmwareOTA,
   esp32FirmwareVersion = '1.2.0',
+  isDeviceOnline = false,
+  lastSeenText = 'Never',
   activeUser,
   onSwitchRole,
   onLogout,
@@ -625,6 +627,16 @@ export const SystemSetupScreen = ({
               <View style={styles.otaHeaderRow}>
                 <MaterialCommunityIcons name="chip" size={18} color="#0284C7" />
                 <Text style={styles.otaHeaderTitle}>ESP32 Hardware Controller</Text>
+              </View>
+              <View style={styles.otaInfoRow}>
+                <Text style={styles.otaInfoLabel}>Hardware Status</Text>
+                <Text style={[styles.otaInfoValue, { color: isDeviceOnline ? COLORS.success : COLORS.danger }]}>
+                  {isDeviceOnline ? '● Online (Live)' : '● Offline (Not Responding)'}
+                </Text>
+              </View>
+              <View style={styles.otaInfoRow}>
+                <Text style={styles.otaInfoLabel}>Last Heartbeat</Text>
+                <Text style={styles.otaInfoValue}>{lastSeenText}</Text>
               </View>
               <View style={styles.otaInfoRow}>
                 <Text style={styles.otaInfoLabel}>Board Firmware</Text>

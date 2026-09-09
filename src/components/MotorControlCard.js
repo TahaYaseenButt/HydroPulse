@@ -9,6 +9,8 @@ export const MotorControlCard = ({
   onStartMotor,
   onStopMotor,
   isConnected = false,
+  isDeviceOnline = false,
+  lastSeenText = 'Never',
   userRole = 'parent',
   onOpenRoleModal,
   onShowCooldown,
@@ -29,8 +31,16 @@ export const MotorControlCard = ({
       return;
     }
 
+    if (!isDeviceOnline) {
+      Alert.alert(
+        'Controller Not Responding',
+        'The ESP32 controller is not responding. Please check that the ESP32 is powered on and connected to WiFi.'
+      );
+      return;
+    }
+
     if (!isConnected) {
-      Alert.alert('Offline', 'Controller is not connected.');
+      Alert.alert('Offline', 'App is not connected to cloud broker.');
       return;
     }
 
@@ -62,8 +72,16 @@ export const MotorControlCard = ({
       return;
     }
 
+    if (!isDeviceOnline) {
+      Alert.alert(
+        'Controller Not Responding',
+        'The ESP32 controller is not responding. Please check that the ESP32 is powered on and connected to WiFi.'
+      );
+      return;
+    }
+
     if (!isConnected) {
-      Alert.alert('Offline', 'Controller is not connected.');
+      Alert.alert('Offline', 'App is not connected to cloud broker.');
       return;
     }
 
@@ -108,6 +126,7 @@ export const MotorControlCard = ({
             styles.badge,
             motorState && styles.badgeRunning,
             isCooldown && styles.badgeCooldown,
+            !isDeviceOnline && styles.badgeOffline,
           ]}
         >
           <View
@@ -115,6 +134,7 @@ export const MotorControlCard = ({
               styles.dot,
               motorState && styles.dotRunning,
               isCooldown && styles.dotCooldown,
+              !isDeviceOnline && styles.dotOffline,
             ]}
           />
           <Text
@@ -122,15 +142,26 @@ export const MotorControlCard = ({
               styles.badgeText,
               motorState && styles.badgeTextRunning,
               isCooldown && styles.badgeTextCooldown,
+              !isDeviceOnline && styles.badgeTextOffline,
             ]}
           >
-            {motorState ? 'RUNNING' : isCooldown ? `${cooldownRemaining}s` : 'IDLE'}
+            {!isDeviceOnline ? 'OFFLINE' : motorState ? 'RUNNING' : isCooldown ? `${cooldownRemaining}s` : 'IDLE'}
           </Text>
         </View>
       </View>
 
+      {/* Controller Offline Alert Bar */}
+      {!isDeviceOnline && (
+        <View style={styles.offlineNoticeBar}>
+          <MaterialCommunityIcons name="cloud-off-outline" size={14} color="#DC2626" />
+          <Text style={styles.offlineNoticeText}>
+            Controller offline ({lastSeenText}). Relay controls paused.
+          </Text>
+        </View>
+      )}
+
       {/* Child Lock Alert */}
-      {!isParent && (
+      {!isParent && isDeviceOnline && (
         <TouchableOpacity
           style={styles.childLockBanner}
           onPress={onOpenRoleModal}
@@ -147,16 +178,16 @@ export const MotorControlCard = ({
         <TouchableOpacity
           style={[
             styles.btnStart,
-            (!isParent || motorState || isCooldown || !isConnected) && styles.btnDisabled,
+            (!isParent || motorState || isCooldown || !isConnected || !isDeviceOnline) && styles.btnDisabled,
           ]}
           onPress={handleStartPress}
           activeOpacity={0.8}
         >
           <MaterialCommunityIcons
-            name={!isParent ? 'lock-outline' : 'power'}
+            name={!isParent ? 'lock-outline' : !isDeviceOnline ? 'cloud-off-outline' : 'power'}
             size={16}
             color={
-              !isParent || motorState || isCooldown || !isConnected
+              !isParent || motorState || isCooldown || !isConnected || !isDeviceOnline
                 ? '#94a3b8'
                 : COLORS.white
             }
@@ -164,33 +195,37 @@ export const MotorControlCard = ({
           <Text
             style={[
               styles.btnStartText,
-              (!isParent || motorState || isCooldown || !isConnected) && styles.btnTextDisabled,
+              (!isParent || motorState || isCooldown || !isConnected || !isDeviceOnline) && styles.btnTextDisabled,
             ]}
           >
-            {!isParent ? 'Locked' : 'Start Pump'}
+            {!isDeviceOnline ? 'Offline' : !isParent ? 'Locked' : 'Start Pump'}
           </Text>
         </TouchableOpacity>
 
         <TouchableOpacity
           style={[
             styles.btnStop,
-            (!isParent || !motorState || !isConnected) && styles.btnDisabled,
+            (!isParent || !motorState || !isConnected || !isDeviceOnline) && styles.btnDisabled,
           ]}
           onPress={handleStopPress}
           activeOpacity={0.8}
         >
           <MaterialCommunityIcons
-            name={!isParent ? 'lock-outline' : 'stop'}
+            name={!isParent ? 'lock-outline' : !isDeviceOnline ? 'cloud-off-outline' : 'power'}
             size={16}
-            color={!isParent || !motorState || !isConnected ? '#94a3b8' : COLORS.white}
+            color={
+              !isParent || !motorState || !isConnected || !isDeviceOnline
+                ? '#94a3b8'
+                : COLORS.white
+            }
           />
           <Text
             style={[
               styles.btnStopText,
-              (!isParent || !motorState || !isConnected) && styles.btnTextDisabled,
+              (!isParent || !motorState || !isConnected || !isDeviceOnline) && styles.btnTextDisabled,
             ]}
           >
-            {!isParent ? 'Locked' : 'Stop Pump'}
+            {!isDeviceOnline ? 'Offline' : !isParent ? 'Locked' : 'Stop Pump'}
           </Text>
         </TouchableOpacity>
       </View>
@@ -350,5 +385,33 @@ const styles = StyleSheet.create({
   },
   btnTextDisabled: {
     color: COLORS.textMuted,
+  },
+  badgeOffline: {
+    backgroundColor: '#FEE2E2',
+    borderColor: '#FECACA',
+  },
+  dotOffline: {
+    backgroundColor: '#DC2626',
+  },
+  badgeTextOffline: {
+    color: '#DC2626',
+  },
+  offlineNoticeBar: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#FEF2F2',
+    borderWidth: 1,
+    borderColor: '#FECACA',
+    paddingHorizontal: 10,
+    paddingVertical: 7,
+    borderRadius: 8,
+    marginBottom: 12,
+    gap: 6,
+  },
+  offlineNoticeText: {
+    fontFamily: FONTS.medium,
+    fontSize: 11,
+    color: '#991B1B',
+    flex: 1,
   },
 });

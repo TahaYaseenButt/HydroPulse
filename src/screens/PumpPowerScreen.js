@@ -10,6 +10,8 @@ export const PumpPowerScreen = ({
   onStartMotor,
   onStopMotor,
   isConnected,
+  isDeviceOnline = false,
+  lastSeenText = 'Never',
   userRole = 'parent',
   onOpenRoleModal,
   onShowCooldown,
@@ -52,6 +54,8 @@ export const PumpPowerScreen = ({
         onStartMotor={onStartMotor}
         onStopMotor={onStopMotor}
         isConnected={isConnected}
+        isDeviceOnline={isDeviceOnline}
+        lastSeenText={lastSeenText}
         userRole={userRole}
         onOpenRoleModal={onOpenRoleModal}
         onShowCooldown={onShowCooldown}

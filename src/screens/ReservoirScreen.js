@@ -26,6 +26,8 @@ export const ReservoirScreen = ({
   onStartMotor,
   onStopMotor,
   isConnected = true,
+  isDeviceOnline = false,
+  lastSeenText = 'Never',
   userRole = 'parent',
   deviceId = 'TANK-01',
   onOpenRoleModal,
@@ -46,9 +48,18 @@ export const ReservoirScreen = ({
       return;
     }
 
+    if (!isDeviceOnline) {
+      triggerHaptic.warning();
+      Alert.alert(
+        'Controller Not Responding',
+        'ESP32 hardware controller is currently offline. Motor commands cannot be executed.'
+      );
+      return;
+    }
+
     if (!isConnected) {
       triggerHaptic.warning();
-      Alert.alert('Offline', 'Controller is not connected.');
+      Alert.alert('Offline', 'App is not connected to cloud broker.');
       return;
     }
 
@@ -86,8 +97,10 @@ export const ReservoirScreen = ({
         {/* Right: connection + device + role */}
         <View style={styles.statusCluster}>
           <View style={styles.connRow}>
-            <View style={[styles.connDot, isConnected ? styles.dotGreen : styles.dotRed]} />
-            <Text style={styles.deviceLabel}>{deviceId}</Text>
+            <View style={[styles.connDot, isDeviceOnline ? styles.dotGreen : styles.dotRed]} />
+            <Text style={[styles.deviceLabel, !isDeviceOnline && styles.deviceLabelOffline]}>
+              {deviceId} • {isDeviceOnline ? 'Live' : 'Offline'}
+            </Text>
           </View>
           <TouchableOpacity
             style={[styles.roleChip, isParent ? styles.roleChipParent : styles.roleChipChild]}
@@ -103,13 +116,28 @@ export const ReservoirScreen = ({
         </View>
       </View>
 
+      {/* ── Prominent Offline Banner when ESP32 is not responding ── */}
+      {!isDeviceOnline && (
+        <View style={styles.offlineBanner}>
+          <View style={styles.offlineIconCircle}>
+            <MaterialCommunityIcons name="cloud-off-outline" size={16} color="#DC2626" />
+          </View>
+          <View style={styles.offlineTextCol}>
+            <Text style={styles.offlineTitle}>Controller Not Responding</Text>
+            <Text style={styles.offlineSub}>
+              ESP32 is offline ({lastSeenText}). Check power supply & WiFi.
+            </Text>
+          </View>
+        </View>
+      )}
+
       {/* ── Water Tank ── */}
       <View style={styles.tankWrapper}>
         <WaterTankView
           percentage={percentage}
           remainingLiters={remainingLiters}
           totalCapacity={totalCapacity}
-          flowStatus={flowStatus}
+          flowStatus={isDeviceOnline ? flowStatus : 'offline'}
           lowThreshold={lowThreshold}
           criticalThreshold={criticalThreshold}
           highThreshold={highThreshold}
@@ -122,18 +150,21 @@ export const ReservoirScreen = ({
           styles.motorBtn,
           motorState ? styles.motorBtnStop : styles.motorBtnStart,
           cooldownRemaining > 0 && styles.motorBtnCooldown,
+          !isDeviceOnline && styles.motorBtnOffline,
         ]}
         onPress={handleMotorPress}
         activeOpacity={0.85}
       >
         <MaterialCommunityIcons
-          name={cooldownRemaining > 0 ? 'timer-sand' : 'power'}
+          name={!isDeviceOnline ? 'cloud-off-outline' : cooldownRemaining > 0 ? 'timer-sand' : 'power'}
           size={18}
           color={COLORS.white}
           style={{ marginRight: 8 }}
         />
         <Text style={styles.motorBtnText}>
-          {motorState
+          {!isDeviceOnline
+            ? 'Controller Offline'
+            : motorState
             ? `Turn Off Motor${cooldownRemaining > 0 ? ` (${cooldownRemaining}s)` : ''}`
             : `Turn On Motor${cooldownRemaining > 0 ? ` (${cooldownRemaining}s)` : ''}`}
         </Text>
@@ -267,5 +298,47 @@ const styles = StyleSheet.create({
     fontSize: 15,
     color: COLORS.white,
     letterSpacing: 0.2,
+  },
+  deviceLabelOffline: {
+    color: '#EF4444',
+  },
+  offlineBanner: {
+    width: '100%',
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#FEF2F2',
+    borderWidth: 1,
+    borderColor: '#FECACA',
+    borderRadius: 12,
+    paddingHorizontal: 12,
+    paddingVertical: 9,
+    marginBottom: 6,
+    gap: 10,
+  },
+  offlineIconCircle: {
+    width: 28,
+    height: 28,
+    borderRadius: 8,
+    backgroundColor: '#FEE2E2',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  offlineTextCol: {
+    flex: 1,
+  },
+  offlineTitle: {
+    fontFamily: FONTS.bold,
+    fontSize: 12,
+    color: '#DC2626',
+    letterSpacing: 0.1,
+  },
+  offlineSub: {
+    fontFamily: FONTS.medium,
+    fontSize: 11,
+    color: '#991B1B',
+    marginTop: 1,
+  },
+  motorBtnOffline: {
+    backgroundColor: '#94A3B8',
   },
 });

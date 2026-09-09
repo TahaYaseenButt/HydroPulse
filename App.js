@@ -87,6 +87,54 @@ export default function App() {
   const [isConnected, setIsConnected] = useState(false);
   const [connectionStatusText, setConnectionStatusText] = useState('Connecting...');
 
+  // ESP32 Hardware Heartbeat & Online Watchdog
+  const [isDeviceOnline, setIsDeviceOnline] = useState(false);
+  const [lastEsp32MessageTime, setLastEsp32MessageTime] = useState(null);
+  const lastEsp32MessageTimeRef = useRef(null);
+
+  const markEsp32Active = () => {
+    const now = Date.now();
+    lastEsp32MessageTimeRef.current = now;
+    setLastEsp32MessageTime(now);
+    setIsDeviceOnline(true);
+  };
+
+  // Watchdog: checks every 2s if ESP32 missed its 2s telemetry cycle
+  useEffect(() => {
+    const watchdog = setInterval(() => {
+      if (isSimulating) {
+        setIsDeviceOnline(true);
+        return;
+      }
+      const lastMsg = lastEsp32MessageTimeRef.current;
+      if (!lastMsg) {
+        setIsDeviceOnline((prev) => {
+          if (prev) saveWidgetData({ flowStatus: 'offline' });
+          return false;
+        });
+      } else if (Date.now() - lastMsg > 7500) {
+        setIsDeviceOnline((prev) => {
+          if (prev) saveWidgetData({ flowStatus: 'offline' });
+          return false;
+        });
+      } else {
+        setIsDeviceOnline(true);
+      }
+    }, 2000);
+
+    return () => clearInterval(watchdog);
+  }, [isSimulating]);
+
+  const getEsp32LastSeenText = () => {
+    if (isSimulating) return 'Simulation Mode';
+    if (!lastEsp32MessageTime) return 'Never';
+    const elapsedSec = Math.floor((Date.now() - lastEsp32MessageTime) / 1000);
+    if (elapsedSec < 4) return 'Just now';
+    if (elapsedSec < 60) return `${elapsedSec}s ago`;
+    const mins = Math.floor(elapsedSec / 60);
+    return `${mins}m ago`;
+  };
+
   // Live Tank Telemetry
   const [distanceCm, setDistanceCm] = useState(100);
   const [waterDepthMeters, setWaterDepthMeters] = useState('1.00');
@@ -206,6 +254,7 @@ export default function App() {
         client.subscribe('waterlevel/ota/status', 0);
       },
       onMessage: (topic, payload) => {
+        markEsp32Active();
         if (topic === activeSettings.mqttTopicMotorStatus) {
           handleMotorStatusMessage(payload);
         } else if (topic === 'waterlevel/ota/status') {
@@ -228,10 +277,12 @@ export default function App() {
       },
       onError: () => {
         setIsConnected(false);
+        setIsDeviceOnline(false);
         setConnectionStatusText('Connection Error');
       },
       onClose: () => {
         setIsConnected(false);
+        setIsDeviceOnline(false);
         setConnectionStatusText('Offline');
       },
     });
@@ -616,6 +667,8 @@ export default function App() {
               onStartMotor={handleStartMotor}
               onStopMotor={handleStopMotor}
               isConnected={isConnected}
+              isDeviceOnline={isDeviceOnline}
+              lastSeenText={getEsp32LastSeenText()}
               userRole={activeUser?.role}
               deviceId={activeUser?.deviceId || 'TANK-01'}
               onOpenRoleModal={() => setIsRoleModalVisible(true)}
@@ -646,6 +699,8 @@ export default function App() {
               onStartMotor={handleStartMotor}
               onStopMotor={handleStopMotor}
               isConnected={isConnected}
+              isDeviceOnline={isDeviceOnline}
+              lastSeenText={getEsp32LastSeenText()}
               userRole={activeUser?.role}
               onOpenRoleModal={() => setIsRoleModalVisible(true)}
               onShowCooldown={() => setIsCooldownModalVisible(true)}
@@ -660,6 +715,8 @@ export default function App() {
               onResetSettings={handleResetSettings}
               onCheckFirmwareOTA={handleCheckFirmwareOTA}
               esp32FirmwareVersion={esp32FirmwareVersion}
+              isDeviceOnline={isDeviceOnline}
+              lastSeenText={getEsp32LastSeenText()}
               activeUser={activeUser}
               onSwitchRole={handleSelectRole}
               onLogout={handleLogout}
