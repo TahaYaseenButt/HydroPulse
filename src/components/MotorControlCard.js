@@ -306,10 +306,10 @@ export const MotorControlCard = ({
           </Text>
           <Text style={styles.timerSub}>
             {motorState
-              ? 'Steady high-pressure discharge • 42 L/min'
+              ? 'Active pumping delivery in progress'
               : isCooldown
               ? 'Relay protection lock active'
-              : '2.0 kW Single Phase • 220V AC'}
+              : 'Automatic Pump Controller • Standby'}
           </Text>
         </View>
 
@@ -343,24 +343,24 @@ export const MotorControlCard = ({
         )}
       </View>
 
-      {/* Live Electrical & Mechanical Telemetry Bar (Light Theme) */}
+      {/* Live Operational Telemetry Bar (Generic for all pump sizes, Light Theme) */}
       <View style={styles.telemetryGrid}>
         <View style={styles.telemetryItem}>
           <View style={styles.telemetryIconRow}>
-            <MaterialCommunityIcons name="flash-outline" size={13} color={COLORS.primary} />
-            <Text style={styles.telemetryLabel}>POWER</Text>
+            <MaterialCommunityIcons name="power" size={13} color={COLORS.primary} />
+            <Text style={styles.telemetryLabel}>STATE</Text>
           </View>
-          <Text style={styles.telemetryValue}>{motorState ? '1.92 kW' : '0.00 kW'}</Text>
+          <Text style={styles.telemetryValue}>{motorState ? 'ACTIVE' : 'STANDBY'}</Text>
         </View>
 
         <View style={styles.telemetryDivider} />
 
         <View style={styles.telemetryItem}>
           <View style={styles.telemetryIconRow}>
-            <MaterialCommunityIcons name="current-ac" size={13} color="#0D9488" />
-            <Text style={styles.telemetryLabel}>CURRENT</Text>
+            <MaterialCommunityIcons name="toggle-switch-outline" size={13} color="#0D9488" />
+            <Text style={styles.telemetryLabel}>RELAY</Text>
           </View>
-          <Text style={styles.telemetryValue}>{motorState ? '8.7 A' : '0.0 A'}</Text>
+          <Text style={styles.telemetryValue}>{motorState ? 'CLOSED' : 'OPEN'}</Text>
         </View>
 
         <View style={styles.telemetryDivider} />
@@ -370,7 +370,7 @@ export const MotorControlCard = ({
             <MaterialCommunityIcons name="waves" size={13} color="#6366F1" />
             <Text style={styles.telemetryLabel}>FLOW</Text>
           </View>
-          <Text style={styles.telemetryValue}>{motorState ? '42 L/m' : '0 L/m'}</Text>
+          <Text style={styles.telemetryValue}>{motorState ? 'Flowing' : 'Idle'}</Text>
         </View>
       </View>
 
