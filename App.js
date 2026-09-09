@@ -146,9 +146,15 @@ export default function App() {
 
   // Motor State & Anti-Burnout Cooldown
   const [motorState, setMotorState] = useState(false);
+  const motorStateRef = useRef(false);
   const [cooldownRemaining, setCooldownRemaining] = useState(0);
   const cooldownEndRef = useRef(0);
   const [isCooldownModalVisible, setIsCooldownModalVisible] = useState(false);
+
+  const updateMotorState = (val) => {
+    motorStateRef.current = val;
+    setMotorState(val);
+  };
 
   // Dedicated real-time ticking 20s anti-burnout cooldown timer
   useEffect(() => {
@@ -160,7 +166,7 @@ export default function App() {
       setCooldownRemaining(secs);
       if (secs <= 0) {
         clearInterval(interval);
-        saveWidgetData({ motorState, cooldownRemaining: 0 });
+        saveWidgetData({ motorState: motorStateRef.current, cooldownRemaining: 0 });
       }
     }, 250);
 
@@ -209,10 +215,10 @@ export default function App() {
 
       // Listen to remote changes on Firebase Realtime Database
       subscribeToFirebaseTank((remoteData) => {
-        if (remoteData) {
-          if (remoteData.motorState !== undefined) {
-            setMotorState(remoteData.motorState);
-          }
+        if (remoteData && remoteData.motorState !== undefined) {
+          const remoteState = !!remoteData.motorState;
+          motorStateRef.current = remoteState;
+          setMotorState(remoteState);
         }
       });
     })();
@@ -400,7 +406,7 @@ export default function App() {
       totalCapacity: settings.totalCapacity || 1000,
       depthMeters: (calcWaterHeight / 100.0).toFixed(2),
       depthCm: Math.round(calcWaterHeight),
-      motorState,
+      motorState: motorStateRef.current,
       cooldownRemaining,
       flowStatus: rateStatus,
     });
@@ -412,7 +418,7 @@ export default function App() {
         remainingLiters: calcLiters,
         depthMeters: (calcWaterHeight / 100.0).toFixed(2),
         depthCm: Math.round(calcWaterHeight),
-        motorState,
+        motorState: motorStateRef.current,
         flowStatus: rateStatus,
       },
       activeUser
@@ -436,19 +442,17 @@ export default function App() {
   // 4. Motor State & Anti-Burnout Cooldown Handling (20s safety cooldown)
   const handleMotorStatusMessage = (statusStr) => {
     const isNowOn = statusStr === 'ON';
-    setMotorState((prev) => {
-      if (prev !== isNowOn) {
-        startCooldown(20);
-        saveWidgetData({ motorState: isNowOn, cooldownRemaining: 20 });
-      }
-      return isNowOn;
-    });
+    if (motorStateRef.current !== isNowOn) {
+      updateMotorState(isNowOn);
+      startCooldown(20);
+      saveWidgetData({ motorState: isNowOn, cooldownRemaining: 20 });
+    }
   };
 
   const startCooldown = (seconds = 20) => {
     cooldownEndRef.current = Date.now() + seconds * 1000;
     setCooldownRemaining(seconds);
-    saveWidgetData({ motorState, cooldownRemaining: seconds });
+    saveWidgetData({ motorState: motorStateRef.current, cooldownRemaining: seconds });
   };
 
   // 5. Protected Motor Controls (Parent Role Authorized Only!)
@@ -473,8 +477,12 @@ export default function App() {
     }
 
     triggerHaptic.medium();
-    setMotorState(true);
+    updateMotorState(true);
     startCooldown(20);
+
+    // Clear old history so previous dropping readings do not fight the filling state
+    readingHistoryRef.current = [];
+    setFlowStatus('filling');
 
     if (mqttClientRef.current) {
       mqttClientRef.current.publish(settings.mqttTopicMotorSet, 'ON');
@@ -503,8 +511,12 @@ export default function App() {
     }
 
     triggerHaptic.medium();
-    setMotorState(false);
+    updateMotorState(false);
     startCooldown(20);
+
+    // Immediately stop filling flow state and flush history
+    readingHistoryRef.current = [];
+    setFlowStatus('stable');
 
     if (mqttClientRef.current) {
       mqttClientRef.current.publish(settings.mqttTopicMotorSet, 'OFF');

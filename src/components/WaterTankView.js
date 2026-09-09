@@ -23,12 +23,10 @@ export const WaterTankView = ({
   const animatedPercent = useRef(new Animated.Value(clampedPercent)).current;
 
   // Is the tank actively being filled?
-  // Water stream from top should ONLY pour when:
-  // 1. Tank is NOT actively draining (flowStatus !== 'dropping')
-  // 2. Either the pump motor is ON or telemetry confirms filling
-  // 3. Tank is not completely full (< 99%)
+  // Water stream from top inlet pipe ONLY pours when the pump motor is ON and tank is not full!
+  // When motor is turned OFF, top water stream stops immediately.
   const isDraining = flowStatus === 'dropping' && clampedPercent > 0;
-  const isFilling = !isDraining && (motorState || flowStatus === 'filling') && clampedPercent < 99;
+  const isFilling = motorState && !isDraining && clampedPercent < 99;
 
   // Real-time animation diagnostic logger
   useEffect(() => {

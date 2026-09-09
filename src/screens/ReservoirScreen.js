@@ -204,7 +204,7 @@ export const ReservoirScreen = ({
           </Text>
           <Text style={styles.diagRow}>
             • <Text style={styles.diagBold}>Inlet Water Stream:</Text>{' '}
-            {(motorState || flowStatus === 'filling') && flowStatus !== 'dropping' && percentage < 99
+            {motorState && flowStatus !== 'dropping' && percentage < 99
               ? 'ACTIVE (Pouring Into Tank)'
               : 'STOPPED'}
           </Text>
