@@ -34,7 +34,7 @@ export const WidgetsScreen = ({
   const handleHowToAdd = () => {
     Alert.alert(
       'How to Add Widgets to Home Screen',
-      '1. Long-press on your phone\'s Home Screen.\n2. Tap "Widgets" or "+" button.\n3. Search or scroll to "HydroPulse".\n4. Select your preferred size:\n   • Small (2×2): Percentage Only\n   • Medium (4×2): Tank & Water Level\n   • Large (4×4): Full Tank + Pump Controls\n5. Tap "Add Widget" to place it!'
+      '1. Long-press on your phone\'s Home Screen.\n2. Tap "Widgets" or "+" button.\n3. Search or scroll to "Hydro Pulse".\n4. Select your preferred size:\n   • Small (2×2): Percentage Only\n   • Medium (4×2): Tank & Water Level\n   • Large (4×4): Full Tank + Pump Controls\n5. Tap "Add Widget" to place it!'
     );
   };
 

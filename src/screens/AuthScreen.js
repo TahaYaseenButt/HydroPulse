@@ -12,6 +12,7 @@ import {
   Keyboard,
   Animated,
   Platform,
+  Image,
 } from 'react-native';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { COLORS, FONTS } from '../constants/theme';
@@ -412,14 +413,16 @@ export const AuthScreen = ({ onLoginSuccess }) => {
               ]}
             />
             <View style={styles.logoOuterHalo}>
-              <View style={styles.logoInner}>
-                <MaterialCommunityIcons name="water" size={30} color={COLORS.white} />
-              </View>
+              <Image
+                source={require('../../assets/logo.png')}
+                style={styles.logoImage}
+                resizeMode="contain"
+              />
             </View>
           </View>
 
           <Text style={styles.brandTitle}>
-            Hydro<Text style={styles.brandAccent}>Pulse</Text>
+            Hydro <Text style={styles.brandAccent}>Pulse</Text>
           </Text>
 
           <View style={styles.statusPill}>
@@ -1160,10 +1163,10 @@ const styles = StyleSheet.create({
     backgroundColor: COLORS.primary,
   },
   logoOuterHalo: {
-    width: 66,
-    height: 66,
-    borderRadius: 33,
-    backgroundColor: 'rgba(255, 255, 255, 0.95)',
+    width: 68,
+    height: 68,
+    borderRadius: 20,
+    backgroundColor: '#FFFFFF',
     borderWidth: 1.5,
     borderColor: '#bae6fd',
     alignItems: 'center',
@@ -1173,19 +1176,12 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.16,
     shadowRadius: 8,
     elevation: 3,
+    overflow: 'hidden',
   },
-  logoInner: {
-    width: 46,
-    height: 46,
-    borderRadius: 23,
-    backgroundColor: COLORS.primary,
-    alignItems: 'center',
-    justifyContent: 'center',
-    shadowColor: COLORS.primary,
-    shadowOffset: { width: 0, height: 3 },
-    shadowOpacity: 0.35,
-    shadowRadius: 6,
-    elevation: 4,
+  logoImage: {
+    width: 58,
+    height: 58,
+    borderRadius: 16,
   },
   brandTitle: {
     fontFamily: FONTS.bold,

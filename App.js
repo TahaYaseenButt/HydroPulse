@@ -6,6 +6,7 @@ import {
   TouchableOpacity,
   Alert,
   ActivityIndicator,
+  Image,
 } from 'react-native';
 import { SafeAreaProvider, SafeAreaView } from 'react-native-safe-area-context';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
@@ -550,14 +551,27 @@ export default function App() {
     return (
       <SafeAreaProvider>
         <SafeAreaView
-          style={[styles.safeArea, { justifyContent: 'center', alignItems: 'center' }]}
+          style={[styles.safeArea, styles.splashContainer]}
           edges={['top', 'left', 'right', 'bottom']}
         >
           <ExpoStatusBar style="dark" />
-          <ActivityIndicator size="large" color={COLORS.primary} />
-          <Text style={{ marginTop: 14, fontSize: 13, color: COLORS.textMuted, fontWeight: '600' }}>
-            Starting HydroPulse...
+          {/* App Custom Logo */}
+          <View style={styles.splashLogoContainer}>
+            <Image
+              source={require('./assets/logo.png')}
+              style={styles.splashLogoImage}
+              resizeMode="contain"
+            />
+          </View>
+          <Text style={styles.splashTitle}>
+            Hydro <Text style={styles.splashTitleAccent}>Pulse</Text>
           </Text>
+          <Text style={styles.splashSubtitle}>Smart Water Management System</Text>
+          
+          <View style={styles.splashLoaderWrapper}>
+            <ActivityIndicator size="small" color={COLORS.primary} />
+            <Text style={styles.splashStatusText}>Starting app...</Text>
+          </View>
         </SafeAreaView>
       </SafeAreaProvider>
     );
@@ -796,5 +810,63 @@ const styles = StyleSheet.create({
   mainContent: {
     flex: 1,
     backgroundColor: COLORS.background,
+  },
+  splashContainer: {
+    justifyContent: 'center',
+    alignItems: 'center',
+    backgroundColor: '#FFFFFF',
+  },
+  splashLogoContainer: {
+    width: 110,
+    height: 110,
+    borderRadius: 26,
+    shadowColor: '#0276FF',
+    shadowOffset: { width: 0, height: 10 },
+    shadowOpacity: 0.28,
+    shadowRadius: 18,
+    elevation: 10,
+    marginBottom: 20,
+    overflow: 'hidden',
+    backgroundColor: '#FFFFFF',
+  },
+  splashLogoImage: {
+    width: '100%',
+    height: '100%',
+    borderRadius: 26,
+  },
+  splashTitle: {
+    fontSize: 28,
+    fontFamily: FONTS.bold,
+    fontWeight: '800',
+    color: '#0F172A',
+    letterSpacing: -0.6,
+  },
+  splashTitleAccent: {
+    color: COLORS.primary,
+  },
+  splashSubtitle: {
+    fontSize: 13,
+    fontFamily: FONTS.medium,
+    fontWeight: '500',
+    color: COLORS.textMuted,
+    marginTop: 6,
+    marginBottom: 32,
+  },
+  splashLoaderWrapper: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 10,
+    backgroundColor: '#F1F5F9',
+    paddingHorizontal: 16,
+    paddingVertical: 9,
+    borderRadius: 24,
+    borderWidth: 1,
+    borderColor: '#E2E8F0',
+  },
+  splashStatusText: {
+    fontSize: 12,
+    fontFamily: FONTS.semiBold,
+    fontWeight: '600',
+    color: COLORS.textSecondary,
   },
 });

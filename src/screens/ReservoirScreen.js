@@ -5,6 +5,7 @@ import {
   StyleSheet,
   TouchableOpacity,
   Alert,
+  Image,
 } from 'react-native';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { WaterTankView } from '../components/WaterTankView';
@@ -72,9 +73,13 @@ export const ReservoirScreen = ({
       <View style={styles.statusBar}>
         {/* Brand mark */}
         <View style={styles.brand}>
-          <View style={styles.brandDot} />
+          <Image
+            source={require('../../assets/logo.png')}
+            style={styles.brandLogo}
+            resizeMode="contain"
+          />
           <Text style={styles.brandName}>
-            Hydro<Text style={styles.brandAccent}>Pulse</Text>
+            Hydro <Text style={styles.brandAccent}>Pulse</Text>
           </Text>
         </View>
 
@@ -167,11 +172,10 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     gap: 7,
   },
-  brandDot: {
-    width: 8,
-    height: 8,
-    borderRadius: 4,
-    backgroundColor: COLORS.primary,
+  brandLogo: {
+    width: 22,
+    height: 22,
+    borderRadius: 6,
   },
   brandName: {
     fontFamily: FONTS.extraBold,

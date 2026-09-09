@@ -68,7 +68,7 @@ export const LargeWidget = ({
       <View style={styles.headerRow}>
         <View style={styles.brandRow}>
           <MaterialCommunityIcons name="water" size={17} color={theme.accent} />
-          <Text style={styles.brandTitle}>HydroPulse Smart Tank</Text>
+          <Text style={styles.brandTitle}>Hydro Pulse Smart Tank</Text>
         </View>
         <View style={styles.badgeRow}>
           <View

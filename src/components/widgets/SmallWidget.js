@@ -55,7 +55,7 @@ export const SmallWidget = ({
       <View style={styles.topRow}>
         <View style={styles.brandRow}>
           <MaterialCommunityIcons name="water" size={16} color={theme.iconColor} />
-          <Text style={styles.brandText}>HydroPulse</Text>
+          <Text style={styles.brandText}>Hydro Pulse</Text>
         </View>
         <View style={[styles.statusDot, { backgroundColor: theme.dot }]} />
       </View>

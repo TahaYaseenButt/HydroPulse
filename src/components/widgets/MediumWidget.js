@@ -103,7 +103,7 @@ export const MediumWidget = ({
         <View style={styles.topMetaRow}>
           <View style={styles.brandRow}>
             <MaterialCommunityIcons name="water" size={15} color={theme.accent} />
-            <Text style={styles.brandText}>HydroPulse</Text>
+            <Text style={styles.brandText}>Hydro Pulse</Text>
           </View>
           <View style={styles.statusPill}>
             <View style={[styles.statusDot, { backgroundColor: theme.accent }]} />
