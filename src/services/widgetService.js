@@ -35,8 +35,9 @@ export const saveWidgetData = async ({
         const { HydroPulseNativeWidget } = require('../widgets/HydroPulseNativeWidget');
         requestWidgetUpdate({
           widgetName: 'HydroPulseWidget',
-          renderWidget: () => (
+          renderWidget: (widgetInfo) => (
             <HydroPulseNativeWidget
+              widgetInfo={widgetInfo}
               percentage={payload.percentage}
               remainingLiters={payload.remainingLiters}
               depthMeters={payload.depthMeters}

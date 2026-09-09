@@ -32,6 +32,7 @@ export async function widgetTaskHandler(props) {
 
       props.renderWidget(
         <HydroPulseNativeWidget
+          widgetInfo={props.widgetInfo}
           percentage={data.percentage}
           remainingLiters={data.remainingLiters}
           depthMeters={data.depthMeters}
