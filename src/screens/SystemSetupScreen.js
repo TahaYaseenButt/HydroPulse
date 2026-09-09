@@ -17,6 +17,7 @@ import {
   saveFirebaseConfig,
   DEFAULT_FIREBASE_CONFIG,
 } from '../services/firebaseService';
+import * as Updates from 'expo-updates';
 
 export const SystemSetupScreen = ({
   settings,
@@ -166,6 +167,60 @@ export const SystemSetupScreen = ({
     ]);
   };
 
+  const [isCheckingAppUpdate, setIsCheckingAppUpdate] = useState(false);
+  const [appUpdateLastChecked, setAppUpdateLastChecked] = useState('Just now');
+
+  const handleCheckAppUpdate = async () => {
+    setIsCheckingAppUpdate(true);
+    try {
+      if (__DEV__) {
+        Alert.alert(
+          'Hydro Pulse App Updates',
+          'Running in Development mode. Over-The-Air (OTA) updates are active in built APKs.'
+        );
+        return;
+      }
+
+      const update = await Updates.checkForUpdateAsync();
+      setAppUpdateLastChecked(
+        new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
+      );
+
+      if (update.isAvailable) {
+        Alert.alert(
+          'App Update Available',
+          'A new version of Hydro Pulse is available! Would you like to download and restart now?',
+          [
+            { text: 'Later', style: 'cancel' },
+            {
+              text: 'Download & Restart',
+              onPress: async () => {
+                try {
+                  setIsCheckingAppUpdate(true);
+                  await Updates.fetchUpdateAsync();
+                  await Updates.reloadAsync();
+                } catch (fetchErr) {
+                  Alert.alert('Update Failed', fetchErr?.message || 'Could not download update.');
+                } finally {
+                  setIsCheckingAppUpdate(false);
+                }
+              },
+            },
+          ]
+        );
+      } else {
+        Alert.alert(
+          'Hydro Pulse App',
+          `Your app is up to date!\n\nChannel: ${Updates.channel || 'preview'}\nRuntime: ${Updates.runtimeVersion || '1.0.0'}\nUpdate ID: ${Updates.updateId ? Updates.updateId.slice(0, 8) + '...' : 'Embedded'}`
+        );
+      }
+    } catch (e) {
+      Alert.alert('App Update Status', e?.message || 'Could not check for updates.');
+    } finally {
+      setIsCheckingAppUpdate(false);
+    }
+  };
+
   const handleCheckFirmware = () => {
     setIsCheckingFirmware(true);
 
@@ -179,7 +234,7 @@ export const SystemSetupScreen = ({
         new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
       );
       Alert.alert(
-        'Firmware Status',
+        'Controller Firmware',
         `ESP32 v${esp32FirmwareVersion} • Up to date.`
       );
     }, 1200);
@@ -466,13 +521,52 @@ export const SystemSetupScreen = ({
         {/* TAB 4: CLOUD & FIRMWARE */}
         {activeTab === 'ota' && (
           <View style={styles.sectionCard}>
+            {/* Hydro Pulse Mobile App OTA Updates Card */}
             <View style={styles.otaDetailsBox}>
               <View style={styles.otaHeaderRow}>
-                <MaterialCommunityIcons name="chip" size={18} color={COLORS.primary} />
-                <Text style={styles.otaHeaderTitle}>Controller Firmware</Text>
+                <MaterialCommunityIcons name="cellphone-arrow-down" size={18} color={COLORS.primary} />
+                <Text style={styles.otaHeaderTitle}>Hydro Pulse App (OTA)</Text>
               </View>
               <View style={styles.otaInfoRow}>
-                <Text style={styles.otaInfoLabel}>Version</Text>
+                <Text style={styles.otaInfoLabel}>App Version</Text>
+                <Text style={styles.otaInfoValue}>1.0.0</Text>
+              </View>
+              <View style={styles.otaInfoRow}>
+                <Text style={styles.otaInfoLabel}>Release Channel</Text>
+                <Text style={styles.otaInfoValue}>{Updates.channel || 'preview'}</Text>
+              </View>
+              <View style={[styles.otaInfoRow, { borderBottomWidth: 0 }]}>
+                <Text style={styles.otaInfoLabel}>Last Checked</Text>
+                <Text style={styles.otaInfoValue}>{appUpdateLastChecked}</Text>
+              </View>
+            </View>
+
+            <TouchableOpacity
+              style={[styles.btnCheckOTA, isCheckingAppUpdate && styles.btnDisabled]}
+              onPress={handleCheckAppUpdate}
+              disabled={isCheckingAppUpdate}
+              activeOpacity={0.8}
+            >
+              {isCheckingAppUpdate ? (
+                <ActivityIndicator size="small" color={COLORS.white} />
+              ) : (
+                <MaterialCommunityIcons name="cloud-download-outline" size={16} color={COLORS.white} />
+              )}
+              <Text style={styles.btnCheckOTAText}>
+                {isCheckingAppUpdate ? 'Checking App Updates...' : 'Check for App Updates'}
+              </Text>
+            </TouchableOpacity>
+
+            <View style={styles.divider} />
+
+            {/* ESP32 Hardware Controller Firmware Card */}
+            <View style={styles.otaDetailsBox}>
+              <View style={styles.otaHeaderRow}>
+                <MaterialCommunityIcons name="chip" size={18} color="#0284C7" />
+                <Text style={styles.otaHeaderTitle}>ESP32 Hardware Controller</Text>
+              </View>
+              <View style={styles.otaInfoRow}>
+                <Text style={styles.otaInfoLabel}>Board Firmware</Text>
                 <Text style={styles.otaInfoValue}>v{esp32FirmwareVersion}</Text>
               </View>
               <View style={[styles.otaInfoRow, { borderBottomWidth: 0 }]}>
@@ -482,7 +576,7 @@ export const SystemSetupScreen = ({
             </View>
 
             <TouchableOpacity
-              style={[styles.btnCheckOTA, isCheckingFirmware && styles.btnDisabled]}
+              style={[styles.btnCheckOTA, { backgroundColor: '#475569' }, isCheckingFirmware && styles.btnDisabled]}
               onPress={handleCheckFirmware}
               disabled={isCheckingFirmware}
               activeOpacity={0.8}
@@ -490,10 +584,10 @@ export const SystemSetupScreen = ({
               {isCheckingFirmware ? (
                 <ActivityIndicator size="small" color={COLORS.white} />
               ) : (
-                <MaterialCommunityIcons name="cloud-download-outline" size={16} color={COLORS.white} />
+                <MaterialCommunityIcons name="refresh" size={16} color={COLORS.white} />
               )}
               <Text style={styles.btnCheckOTAText}>
-                {isCheckingFirmware ? 'Checking...' : 'Check for Updates'}
+                {isCheckingFirmware ? 'Checking Controller...' : 'Check Controller Firmware'}
               </Text>
             </TouchableOpacity>
 
