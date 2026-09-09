@@ -30,8 +30,12 @@ yarn-error.*
 .DS_Store
 *.pem
 
-# local env files
+# local env & secrets
+.env
 .env*.local
+.env.*
+google-services.json
+GoogleService-Info.plist
 
 # typescript
 *.tsbuildinfo
@@ -39,3 +43,4 @@ yarn-error.*
 # generated native folders
 /ios
 /android
+

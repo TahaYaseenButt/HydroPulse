@@ -22,15 +22,15 @@ import {
 const STORAGE_KEY_FIREBASE_CONFIG = '@hydropulse_firebase_config_v1';
 const STORAGE_KEY_AUTH_USER = '@hydropulse_auth_user_v1';
 
-// Real Firebase Configuration matching user's google-services.json
+// Firebase Configuration sourced from environment variables (.env)
 export const DEFAULT_FIREBASE_CONFIG = {
-  apiKey: 'AIzaSyBjlTqmwAH4QArN2ivS0gYECFwkPonDH7M',
-  authDomain: 'hydroplus-cc36a.firebaseapp.com',
-  databaseURL: 'https://hydroplus-cc36a-default-rtdb.firebaseio.com',
-  projectId: 'hydroplus-cc36a',
-  storageBucket: 'hydroplus-cc36a.firebasestorage.app',
-  messagingSenderId: '880753722431',
-  appId: '1:880753722431:android:60378b3c57cd272324a48a',
+  apiKey: process.env.EXPO_PUBLIC_FIREBASE_API_KEY || '',
+  authDomain: process.env.EXPO_PUBLIC_FIREBASE_AUTH_DOMAIN || 'hydroplus-cc36a.firebaseapp.com',
+  databaseURL: process.env.EXPO_PUBLIC_FIREBASE_DATABASE_URL || 'https://hydroplus-cc36a-default-rtdb.firebaseio.com',
+  projectId: process.env.EXPO_PUBLIC_FIREBASE_PROJECT_ID || 'hydroplus-cc36a',
+  storageBucket: process.env.EXPO_PUBLIC_FIREBASE_STORAGE_BUCKET || 'hydroplus-cc36a.firebasestorage.app',
+  messagingSenderId: process.env.EXPO_PUBLIC_FIREBASE_MESSAGING_SENDER_ID || '880753722431',
+  appId: process.env.EXPO_PUBLIC_FIREBASE_APP_ID || '1:880753722431:android:60378b3c57cd272324a48a',
   enabled: true,
 };
 
