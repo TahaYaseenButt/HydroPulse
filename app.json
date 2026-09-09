@@ -30,6 +30,35 @@
       "eas": {
         "projectId": "33b6f6b0-a654-4d7e-aaa0-5efb348d35c0"
       }
-    }
+    },
+    "updates": {
+      "url": "https://u.expo.dev/33b6f6b0-a654-4d7e-aaa0-5efb348d35c0",
+      "checkAutomatically": "ON_LOAD",
+      "fallbackToCacheTimeout": 3000
+    },
+    "runtimeVersion": {
+      "policy": "appVersion"
+    },
+    "plugins": [
+      [
+        "react-native-android-widget",
+        {
+          "widgets": [
+            {
+              "name": "HydroPulseWidget",
+              "label": "Hydro Pulse Water Level",
+              "minWidth": "160dp",
+              "minHeight": "110dp",
+              "targetCellWidth": 2,
+              "targetCellHeight": 2,
+              "description": "Real-time water tank level and pump status",
+              "previewImage": "./assets/logo.png",
+              "resizeMode": "horizontal|vertical",
+              "updatePeriodMillis": 1800000
+            }
+          ]
+        }
+      ]
+    ]
   }
 }
