@@ -170,6 +170,12 @@ export const SystemSetupScreen = ({
   const [isCheckingAppUpdate, setIsCheckingAppUpdate] = useState(false);
   const [appUpdateLastChecked, setAppUpdateLastChecked] = useState('Just now');
 
+  const currentUpdateMessage =
+    Updates.manifest?.metadata?.message ||
+    Updates.manifest?.extra?.eas?.message ||
+    Updates.manifest?.message ||
+    'Adaptive widget sizing & in-app OTA check';
+
   const handleCheckAppUpdate = async () => {
     setIsCheckingAppUpdate(true);
     try {
@@ -187,9 +193,15 @@ export const SystemSetupScreen = ({
       );
 
       if (update.isAvailable) {
+        const incomingMessage =
+          update.manifest?.metadata?.message ||
+          update.manifest?.extra?.eas?.message ||
+          update.manifest?.message ||
+          'New features and enhancements ready.';
+
         Alert.alert(
           'App Update Available',
-          'A new version of Hydro Pulse is available! Would you like to download and restart now?',
+          `A new version of Hydro Pulse is available!\n\nUpdate Note:\n"${incomingMessage}"\n\nWould you like to download and restart now?`,
           [
             { text: 'Later', style: 'cancel' },
             {
@@ -211,7 +223,7 @@ export const SystemSetupScreen = ({
       } else {
         Alert.alert(
           'Hydro Pulse App',
-          `Your app is up to date!\n\nChannel: ${Updates.channel || 'preview'}\nRuntime: ${Updates.runtimeVersion || '1.0.0'}\nUpdate ID: ${Updates.updateId ? Updates.updateId.slice(0, 8) + '...' : 'Embedded'}`
+          `Your app is up to date!\n\nChannel: ${Updates.channel || 'preview'}\nRuntime: ${Updates.runtimeVersion || '1.0.0'}\nNote: "${currentUpdateMessage}"`
         );
       }
     } catch (e) {
@@ -535,9 +547,18 @@ export const SystemSetupScreen = ({
                 <Text style={styles.otaInfoLabel}>Release Channel</Text>
                 <Text style={styles.otaInfoValue}>{Updates.channel || 'preview'}</Text>
               </View>
-              <View style={[styles.otaInfoRow, { borderBottomWidth: 0 }]}>
+              <View style={styles.otaInfoRow}>
                 <Text style={styles.otaInfoLabel}>Last Checked</Text>
                 <Text style={styles.otaInfoValue}>{appUpdateLastChecked}</Text>
+              </View>
+
+              {/* Latest Update Message Box */}
+              <View style={styles.otaUpdateMessageBox}>
+                <View style={styles.otaUpdateMessageHeader}>
+                  <MaterialCommunityIcons name="message-badge-outline" size={14} color="#1D4ED8" />
+                  <Text style={styles.otaUpdateMessageTitle}>Latest OTA Message</Text>
+                </View>
+                <Text style={styles.otaUpdateMessageText}>"{currentUpdateMessage}"</Text>
               </View>
             </View>
 
@@ -556,6 +577,46 @@ export const SystemSetupScreen = ({
                 {isCheckingAppUpdate ? 'Checking App Updates...' : 'Check for App Updates'}
               </Text>
             </TouchableOpacity>
+
+            {/* New Features in this App Card */}
+            <View style={styles.featuresCard}>
+              <View style={styles.featuresHeader}>
+                <MaterialCommunityIcons name="sparkles" size={16} color="#0284C7" />
+                <Text style={styles.featuresTitle}>New Features in this Version</Text>
+              </View>
+
+              <View style={styles.featureItem}>
+                <MaterialCommunityIcons name="widgets-outline" size={16} color={COLORS.primary} style={styles.featureIcon} />
+                <View style={styles.featureTextCol}>
+                  <Text style={styles.featureItemTitle}>Adaptive Home Screen Widget</Text>
+                  <Text style={styles.featureItemDesc}>Resizes to 4×2 Wide, 2×4 Tall, and 2×2 Compact with live percentage and pump status.</Text>
+                </View>
+              </View>
+
+              <View style={styles.featureItem}>
+                <MaterialCommunityIcons name="lightning-bolt-circle" size={16} color="#10B981" style={styles.featureIcon} />
+                <View style={styles.featureTextCol}>
+                  <Text style={styles.featureItemTitle}>Instant OTA Updates</Text>
+                  <Text style={styles.featureItemDesc}>Receive new features and fixes automatically without installing a new APK.</Text>
+                </View>
+              </View>
+
+              <View style={styles.featureItem}>
+                <MaterialCommunityIcons name="bell-ring-outline" size={16} color="#F59E0B" style={styles.featureIcon} />
+                <View style={styles.featureTextCol}>
+                  <Text style={styles.featureItemTitle}>Smart Level & Motor Safety</Text>
+                  <Text style={styles.featureItemDesc}>Custom threshold notifications and pump cooldown timers to protect hardware.</Text>
+                </View>
+              </View>
+
+              <View style={styles.featureItem}>
+                <MaterialCommunityIcons name="palette-outline" size={16} color="#6366F1" style={styles.featureIcon} />
+                <View style={styles.featureTextCol}>
+                  <Text style={styles.featureItemTitle}>Hydro Pulse Brand Refresh</Text>
+                  <Text style={styles.featureItemDesc}>Custom logo, startup splash screen, and matching blue adaptive Android icon.</Text>
+                </View>
+              </View>
+            </View>
 
             <View style={styles.divider} />
 
@@ -960,5 +1021,77 @@ const styles = StyleSheet.create({
     fontFamily: FONTS.medium,
     fontSize: 12,
     color: COLORS.textMuted,
+  },
+  otaUpdateMessageBox: {
+    backgroundColor: '#EFF6FF',
+    borderRadius: 10,
+    padding: 10,
+    marginTop: 6,
+    borderWidth: 1,
+    borderColor: '#BFDBFE',
+  },
+  otaUpdateMessageHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 5,
+    marginBottom: 3,
+  },
+  otaUpdateMessageTitle: {
+    fontFamily: FONTS.bold,
+    fontSize: 11,
+    color: '#1D4ED8',
+    textTransform: 'uppercase',
+    letterSpacing: 0.5,
+  },
+  otaUpdateMessageText: {
+    fontFamily: FONTS.medium,
+    fontSize: 12,
+    color: '#1E40AF',
+    lineHeight: 16,
+  },
+  featuresCard: {
+    backgroundColor: COLORS.background,
+    borderRadius: 12,
+    padding: 12,
+    gap: 10,
+    marginTop: 10,
+    borderWidth: 1,
+    borderColor: COLORS.border,
+  },
+  featuresHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    paddingBottom: 4,
+    borderBottomWidth: 1,
+    borderBottomColor: COLORS.border,
+  },
+  featuresTitle: {
+    fontFamily: FONTS.bold,
+    fontSize: 12.5,
+    color: COLORS.textPrimary,
+  },
+  featureItem: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    gap: 8,
+  },
+  featureIcon: {
+    marginTop: 2,
+  },
+  featureTextCol: {
+    flex: 1,
+    gap: 2,
+  },
+  featureItemTitle: {
+    fontFamily: FONTS.bold,
+    fontSize: 12,
+    color: COLORS.textPrimary,
+  },
+  featureItemDesc: {
+    fontFamily: FONTS.medium,
+    fontSize: 11,
+    color: COLORS.textMuted,
+    lineHeight: 15,
   },
 });
